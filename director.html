@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ScrapCall Director</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f4c43">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="director.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Director">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.dnav{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.dtab{flex:none;background:none;border:none;border-radius:999px;padding:10px 16px;font-weight:600;cursor:pointer;color:var(--muted);min-height:44px;display:flex;align-items:center;gap:8px}
+.dtab[aria-selected="true"]{background:var(--brand);color:var(--brand-ink)}
+.nbadge{background:var(--hi);color:var(--hi-ink);border-radius:999px;font-size:12px;font-weight:700;padding:1px 7px}
+.view[hidden]{display:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left;cursor:pointer;display:block;width:100%}
+.stat.static{cursor:default}
+.stat .n{font-family:var(--head);font-size:38px;font-weight:700;line-height:1}
+.stat .l{color:var(--muted);font-size:14px;margin-top:4px}
+.stat.alert{border-color:var(--hi);box-shadow:inset 0 0 0 1px var(--hi)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;cursor:pointer;min-height:40px}
+.chip[aria-pressed="true"]{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,var(--surface))}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.rcard{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;display:block;width:100%}
+.rcard:hover{border-color:var(--brand)}
+.rc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.rc-name{font-weight:600}
+.rc-sub{color:var(--muted);font-size:14px}
+.rc-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar .grow{flex:1;min-width:180px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.ccard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.ccard.off{opacity:.65}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:15px;margin:10px 0}
+.kv span:nth-child(odd){color:var(--muted)}
+.kv span:nth-child(even){text-align:right;font-weight:600}
+.ccard .btns{display:flex;gap:8px;margin-top:10px}
+.ccard .btns>*{flex:1;min-height:42px;font-size:15px}
+.rate-row{display:grid;grid-template-columns:2fr 2fr 110px 70px 44px;gap:8px;align-items:center;margin-bottom:8px}
+.rate-row .del{min-height:44px;border:1.5px solid var(--line);background:var(--surface);border-radius:10px;cursor:pointer;font-size:18px}
+.rate-head{font-size:13px;color:var(--muted);font-weight:600}
+@media (max-width:640px){
+  .rate-row{grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface)}
+  .rate-head{display:none}
+}
+.photos a{display:inline-block;margin:0 10px 6px 0}
+.sec{margin:16px 0 6px;font-weight:700;font-size:15px}
+.cashlog{font-size:14px;color:var(--muted);margin:0;padding:0;list-style:none}
+.cashlog li{padding:6px 0;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+  <div class="card">
+    <div class="logo">ScrapCall</div>
+    <p class="lede">Director sign-in</p>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" autocomplete="current-password">
+      <div class="err" id="loginErr" role="alert"></div>
+    </div>
+    <button class="primary block" id="loginBtn" type="button">Sign in</button>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="logo">ScrapCall<small>Director</small></div>
+    <div class="top-actions">
+      <button class="chip-btn" id="installBtn" type="button" hidden>Install app</button>
+      <button class="chip-btn" id="signOut" type="button">Sign out</button>
+    </div>
+  </header>
+  <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Online</span></div>
+  <nav class="dnav" role="tablist" aria-label="Director sections">
+    <button class="dtab" role="tab" data-v="overview" aria-selected="true">Overview</button>
+    <button class="dtab" role="tab" data-v="requests" aria-selected="false">Requests <span class="nbadge" id="newBadge" hidden>0</span></button>
+    <button class="dtab" role="tab" data-v="collectors" aria-selected="false">Collectors</button>
+    <button class="dtab" role="tab" data-v="rates" aria-selected="false">Items and rates</button>
+    <button class="dtab" role="tab" data-v="reports" aria-selected="false">Reports</button>
+  </nav>
+
+  <main class="wrap">
+    <section class="view" id="v-overview" aria-label="Overview">
+      <h1>Today</h1>
+      <p class="lede" id="ovDate"></p>
+      <div class="stats" id="ovStats"></div>
+      <div class="card">
+        <h2>Waiting for a collector</h2>
+        <div id="ovWaiting"></div>
+      </div>
+      <div class="card">
+        <h2>Collectors today</h2>
+        <div class="tbl-wrap" id="ovColl"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-requests" aria-label="Requests" hidden>
+      <h1>Requests</h1>
+      <div class="chips" id="chips" role="group" aria-label="Filter requests"></div>
+      <div class="bar"><input class="grow" type="search" id="search" placeholder="Search name, phone, address, code"></div>
+      <div class="rgrid" id="rlist"></div>
+    </section>
+
+    <section class="view" id="v-collectors" aria-label="Collectors" hidden>
+      <h1>Collectors</h1>
+      <div class="bar"><button class="primary" id="addColl" type="button">Add collector</button></div>
+      <div class="cgrid" id="clist"></div>
+    </section>
+
+    <section class="view" id="v-rates" aria-label="Items and rates" hidden>
+      <h1>Items and rates</h1>
+      <p class="lede">Customers choose from these items, and collectors are paid by these rates. Set an item to hidden to take it off the form without deleting it.</p>
+      <div class="card">
+        <div class="rate-row rate-head"><span>Item</span><span>Note</span><span>Rate per kg</span><span>Shown</span><span></span></div>
+        <div id="rateRows"></div>
+        <div class="bar" style="margin-top:12px">
+          <button class="secondary" id="addRate" type="button">Add item</button>
+          <button class="primary" id="saveRates" type="button">Save rates</button>
+        </div>
+        <div class="err" id="rateErr" role="alert"></div>
+      </div>
+    </section>
+
+    <section class="view" id="v-reports" aria-label="Reports" hidden>
+      <h1>Reports</h1>
+      <div class="bar">
+        <select id="range" aria-label="Period">
+          <option value="today">Today</option><option value="7" selected>Last 7 days</option>
+          <option value="30">Last 30 days</option><option value="month">This month</option><option value="custom">Choose dates</option>
+        </select>
+        <input type="date" id="from" aria-label="From" hidden>
+        <input type="date" id="to" aria-label="To" hidden>
+        <button class="primary" id="runReport" type="button">Show report</button>
+        <button class="secondary" id="csv" type="button" hidden>Download CSV</button>
+      </div>
+      <div id="repOut"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlg" aria-modal="true"></dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  var $=SC.$, $$=SC.$$, esc=SC.esc, TK="scrapcall_director_token";
+  var STATUSES=["Received","Assigned","On the way","Completed","Cancelled"];
+  var token=SC.load(TK,null), S={requests:[],collectors:[],cash:[],today:""}, view="overview", filter="new", query="", lastReport=null, timer=null;
+
+  /* ---------- server calls ---------- */
+  function call(action,data){
+    data=data||{}; data.action=action; data.token=token;
+    return SC.api(data).then(function(res){
+      if(res&&res.auth){ signOut("Please sign in again."); throw new Error("auth"); }
+      return res;
+    });
+  }
+  function showLogin(msg){ $("#login").hidden=false; $("#app").hidden=true; $("#loginErr").textContent=msg||""; setTimeout(function(){$("#pw").focus()},50); }
+  function signOut(msg){ token=null; SC.drop(TK); clearInterval(timer); showLogin(msg); }
+  function start(){
+    $("#login").hidden=true; $("#app").hidden=false;
+    refresh();
+    clearInterval(timer); timer=setInterval(function(){ if(!document.hidden&&navigator.onLine!==false) refresh(true); },60000);
+  }
+
+  $("#loginBtn").addEventListener("click",doLogin);
+  $("#pw").addEventListener("keydown",function(e){ if(e.key==="Enter") doLogin(); });
+  function doLogin(){
+    var pw=$("#pw").value; if(!pw) return;
+    var b=$("#loginBtn"); b.disabled=true; $("#loginErr").textContent="";
+    SC.api({action:"login",role:"director",password:pw}).then(function(res){
+      b.disabled=false;
+      if(res&&res.ok){ token=res.token; SC.save(TK,token); $("#pw").value=""; start(); }
+      else $("#loginErr").textContent=(res&&res.error)||"Couldn’t sign in.";
+    }).catch(function(e){ b.disabled=false; $("#loginErr").textContent=SC.API_URL?"Couldn’t reach the server. Check your internet connection.":e.message; });
+  }
+  $("#signOut").addEventListener("click",function(){ signOut(""); });
+
+  /* ---------- loading data ---------- */
+  function refresh(silent){
+    return Promise.all([call("d_requests"),call("d_collectors")]).then(function(r){
+      if(!r[0].ok||!r[1].ok) throw new Error(r[0].error||r[1].error||"Error");
+      S.requests=r[0].requests; S.today=r[0].today; S.collectors=r[1].collectors; S.cash=r[1].cash;
+      renderAll();
+    }).catch(function(e){ if(e.message!=="auth"&&!silent) SC.toast("Couldn’t load the latest data. Check your connection."); });
+  }
+  SC.watchConnection(function(on){ if(on&&token&&!$("#app").hidden) refresh(true); });
+
+  /* ---------- tabs ---------- */
+  function setView(v){
+    view=v;
+    $$(".dtab").forEach(function(b){ b.setAttribute("aria-selected",b.dataset.v===v?"true":"false"); });
+    ["overview","requests","collectors","rates","reports"].forEach(function(n){ $("#v-"+n).hidden=(n!==v); });
+    window.scrollTo(0,0);
+    if(v==="rates") loadRates();
+    if(v==="reports"&&!lastReport) runReport();
+  }
+  $$(".dtab").forEach(function(b){ b.addEventListener("click",function(){ setView(b.dataset.v); }); });
+
+  function renderAll(){ renderOverview(); renderRequests(); renderCollectors(); }
+
+  /* ---------- overview ---------- */
+  function stats(){
+    var o={fresh:0,phone:0,out:0,done:0,kg:0,paid:0};
+    S.requests.forEach(function(r){
+      var active=r.status!=="Completed"&&r.status!=="Cancelled";
+      if(r.status==="Received"&&!r.collectorId) o.fresh++;
+      if(active&&!r.phoneOk) o.phone++;
+      if(r.status==="Assigned"||r.status==="On the way") o.out++;
+      if(r.status==="Completed"&&(r.doneDay||r.atDay)===S.today){ o.done++; o.kg+=r.kg; o.paid+=r.paid; }
+    });
+    return o;
+  }
+  function statCard(n,l,go,alert){
+    return '<button class="stat'+(alert&&n>0?" alert":"")+'" data-go="'+go+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></button>';
+  }
+  function renderOverview(){
+    var o=stats();
+    $("#ovDate").textContent=S.today?SC.day(S.today):"";
+    $("#ovStats").innerHTML=
+      statCard(o.fresh,"New requests to assign","new",true)+
+      statCard(o.phone,"Phone numbers to confirm","phone",true)+
+      statCard(o.out,"Out with collectors","active",false)+
+      statCard(o.done,"Completed today","done",false)+
+      '<div class="stat static"><div class="n">'+SC.num(o.kg)+'</div><div class="l">kg collected today</div></div>'+
+      '<div class="stat static"><div class="n">'+SC.money(o.paid)+'</div><div class="l">paid out today</div></div>';
+    $$("#ovStats [data-go]").forEach(function(b){ b.addEventListener("click",function(){
+      filter=b.dataset.go; query=""; $("#search").value=""; setView("requests"); renderRequests();
+    }); });
+    var w=S.requests.filter(function(r){ return r.status==="Received"&&!r.collectorId; }).slice(0,6);
+    $("#ovWaiting").innerHTML=w.length?w.map(function(r){
+      return '<div class="bar" style="justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px"><div><b>'+esc(r.name)+'</b> <span class="muted">'+esc(r.code)+'</span><div class="rc-sub">'+esc(r.addr.slice(0,70))+' · '+esc(SC.day(r.day))+', '+esc(r.slot.toLowerCase())+'</div></div><button class="secondary" data-open="'+esc(r.code)+'">Open</button></div>';
+    }).join(""):'<div class="empty"><b>Nothing waiting</b>New customer requests will show up here.</div>';
+    $$("#ovWaiting [data-open]").forEach(function(b){ b.addEventListener("click",function(){ openRequest(b.dataset.open); }); });
+    $("#ovColl").innerHTML=S.collectors.length?
+      '<table class="tbl"><thead><tr><th>Collector</th><th class="num">Open jobs</th><th class="num">Done today</th><th class="num">kg</th><th class="num">Paid</th><th class="num">Cash held</th></tr></thead><tbody>'+
+      S.collectors.map(function(c){ return '<tr><td>'+esc(c.name)+(c.active?"":' <span class="pill">off</span>')+'</td><td class="num">'+c.openJobs+'</td><td class="num">'+c.doneToday+'</td><td class="num">'+SC.num(c.kgToday)+'</td><td class="num">'+SC.money(c.paidToday)+'</td><td class="num">'+SC.money(c.cash.balance)+'</td></tr>'; }).join("")+'</tbody></table>'
+      :'<div class="empty"><b>No collectors yet</b>Add your first collector in the Collectors tab.</div>';
+  }
+
+  /* ---------- requests list ---------- */
+  function inFilter(r,f){
+    var active=r.status!=="Completed"&&r.status!=="Cancelled";
+    if(f==="new") return r.status==="Received";
+    if(f==="phone") return active&&!r.phoneOk;
+    if(f==="active") return r.status==="Assigned"||r.status==="On the way";
+    if(f==="done") return r.status==="Completed";
+    if(f==="cancelled") return r.status==="Cancelled";
+    return true;
+  }
+  var FILTERS=[["new","New"],["phone","Phone to confirm"],["active","With collectors"],["done","Completed"],["cancelled","Cancelled"],["all","All"]];
+  function pillClass(s){ return s==="Completed"?"ok":s==="Cancelled"?"bad":s==="Received"?"warn":"live"; }
+  function renderRequests(){
+    var nNew=S.requests.filter(function(r){return r.status==="Received";}).length;
+    $("#newBadge").hidden=!nNew; $("#newBadge").textContent=nNew;
+    $("#chips").innerHTML=FILTERS.map(function(f){
+      var n=S.requests.filter(function(r){return inFilter(r,f[0]);}).length;
+      return '<button class="chip" data-f="'+f[0]+'" aria-pressed="'+(filter===f[0])+'">'+f[1]+' ('+n+')</button>';
+    }).join("");
+    $$("#chips .chip").forEach(function(b){ b.addEventListener("click",function(){ filter=b.dataset.f; renderRequests(); }); });
+    var rows=S.requests.filter(function(r){
+      if(!inFilter(r,filter)) return false;
+      if(query){ var h=[r.code,r.name,r.phone,r.alt,r.addr,r.types,r.collector].join(" ").toLowerCase(); if(h.indexOf(query)<0) return false; }
+      return true;
+    });
+    $("#rlist").innerHTML=rows.length?rows.map(function(r){
+      return '<button class="rcard" data-code="'+esc(r.code)+'"><div class="rc-top"><span class="code">'+esc(r.code)+'</span><span class="pill '+pillClass(r.status)+'">'+esc(r.status)+'</span></div>'+
+        '<div class="rc-name">'+esc(r.name)+' · '+esc(r.phone)+'</div>'+
+        '<div class="rc-sub">'+esc(r.types)+' — '+esc(r.qty)+'</div>'+
+        '<div class="rc-sub">'+esc(r.confirmed?"Confirmed: "+r.confirmed:"Wants: "+SC.day(r.day)+", "+r.slot.toLowerCase())+'</div>'+
+        '<div class="rc-sub">'+esc(r.addr.slice(0,90))+'</div>'+
+        '<div class="rc-tags">'+(r.phoneOk?'<span class="pill ok">Phone confirmed</span>':'<span class="pill warn">Phone not confirmed</span>')+
+        (r.collector?'<span class="pill live">'+esc(r.collector)+'</span>':'<span class="pill">Unassigned</span>')+'</div></button>';
+    }).join(""):'<div class="empty" style="grid-column:1/-1"><b>No requests here</b>Try another filter or clear the search.</div>';
+    $$("#rlist .rcard").forEach(function(b){ b.addEventListener("click",function(){ openRequest(b.dataset.code); }); });
+  }
+  $("#search").addEventListener("input",function(){ query=this.value.trim().toLowerCase(); renderRequests(); });
+
+  /* ---------- one request: assign, confirm, update ---------- */
+  function openRequest(code){
+    var r=S.requests.filter(function(x){return x.code===code;})[0]; if(!r) return;
+    var collOpts='<option value="">Not assigned</option>'+S.collectors.filter(function(c){return c.active||c.id===r.collectorId;}).map(function(c){
+      return '<option value="'+esc(c.id)+'"'+(c.id===r.collectorId?" selected":"")+'>'+esc(c.name)+(c.active?"":" (off)")+' · '+c.openJobs+' open</option>';
+    }).join("");
+    var statusOpts=STATUSES.map(function(s){ return '<option'+(s===r.status?" selected":"")+'>'+s+'</option>'; }).join("");
+    var wa=SC.waHref(r.phone);
+    var photos=r.photos.map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
+    var done=r.status==="Completed"&&r.kg>0?'<div class="sec">Collected</div><p class="detail"><b>'+SC.kg(r.kg)+'</b> · paid <b>'+SC.money(r.paid)+'</b> ('+esc(r.method)+')</p><p class="detail" style="white-space:pre-line">'+esc(r.details)+'</p>':"";
+    var body=
+      '<p class="detail"><b>'+esc(r.name)+'</b> · received '+esc(SC.when(r.at))+'</p>'+
+      '<div class="bar"><a class="linkbtn" href="'+esc(SC.telHref(r.phone))+'">Call '+esc(r.phone)+'</a>'+(wa?'<a class="linkbtn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp</a>':"")+
+      (r.alt?'<a class="linkbtn" href="'+esc(SC.telHref(r.alt))+'">Call '+esc(r.alt)+'</a>':"")+'</div>'+
+      (r.email?'<p class="detail"><b>Email:</b> <a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a></p>':"")+
+      '<p class="detail"><b>Address:</b> '+esc(r.addr)+' · <a href="'+esc(SC.mapHref(r.addr))+'" target="_blank" rel="noopener">Open in Maps</a></p>'+
+      '<p class="detail"><b>Scrap:</b> '+esc(r.types)+' — '+esc(r.qty)+'</p>'+
+      '<p class="detail"><b>Customer wants:</b> '+esc(SC.day(r.day))+', '+esc(r.slot.toLowerCase())+'</p>'+
+      (r.notes?'<p class="detail"><b>Customer notes:</b> '+esc(r.notes)+'</p>':"")+
+      (photos?'<div class="photos detail">'+photos+'</div>':"")+
+      done+
+      '<div class="sec">Office</div>'+
+      '<label class="check"><input type="checkbox" id="rPhone"'+(r.phoneOk?" checked":"")+'> Phone number confirmed</label>'+
+      '<div class="row field"><div><label for="rColl">Collector</label><select id="rColl">'+collOpts+'</select></div>'+
+      '<div><label for="rStatus">Status</label><select id="rStatus">'+statusOpts+'</select></div></div>'+
+      '<div class="field"><label for="rTime">Confirmed pickup time</label><input type="datetime-local" id="rTime" value="'+esc(r.confirmedInput)+'">'+
+      (r.confirmed&&!r.confirmedInput?'<div class="hint">Currently written in the Sheet as: '+esc(r.confirmed)+'</div>':'<div class="hint">The customer sees this time in their app.</div>')+'</div>'+
+      '<div class="field"><label for="rOffice">Office notes</label><textarea id="rOffice">'+esc(r.office)+'</textarea></div>'+
+      '<div class="err" id="rErr" role="alert"></div>';
+    SC.dialog(r.code,body,'<button class="primary" id="rSave" type="button">Save</button>');
+    $("#rColl").addEventListener("change",function(){
+      var st=$("#rStatus");
+      if(this.value&&st.value==="Received") st.value="Assigned";
+      if(!this.value&&(st.value==="Assigned"||st.value==="On the way")) st.value="Received";
+    });
+    $("#rSave").addEventListener("click",function(){
+      var d={code:r.code};
+      var c=$("#rColl").value; if(c!==r.collectorId) d.collectorId=c;
+      var st=$("#rStatus").value; if(st!==r.status) d.status=st;
+      var t=$("#rTime").value; if(t!==r.confirmedInput) d.confirmedInput=t;
+      var p=$("#rPhone").checked; if(p!==r.phoneOk) d.phoneOk=p;
+      var o=$("#rOffice").value; if(o!==r.office) d.office=o;
+      if(Object.keys(d).length===1){ SC.closeDialog(); return; }
+      if(d.status==="Cancelled"&&!confirm("Cancel request "+r.code+"? The customer will see it as cancelled.")) return;
+      var b=this; b.disabled=true; $("#rErr").textContent="";
+      call("d_update_request",d).then(function(res){
+        b.disabled=false;
+        if(!res.ok){ $("#rErr").textContent=res.error; return; }
+        S.requests=S.requests.map(function(x){ return x.code===r.code?res.request:x; });
+        SC.closeDialog(); renderAll(); SC.toast("Saved."); refresh(true);
+      }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#rErr").textContent="Couldn’t save. Check your connection and try again."; });
+    });
+  }
+
+  /* ---------- collectors ---------- */
+  function renderCollectors(){
+    $("#clist").innerHTML=S.collectors.length?S.collectors.map(function(c){
+      return '<div class="ccard'+(c.active?"":" off")+'"><div class="rc-top"><b style="font-size:18px">'+esc(c.name)+'</b><span class="pill '+(c.active?"ok":"")+'">'+(c.active?"Active":"Off duty")+'</span></div>'+
+        '<div class="rc-sub">'+esc(c.phone)+' · '+esc(c.id)+'</div>'+
+        '<div class="kv"><span>Open jobs</span><span>'+c.openJobs+'</span><span>Done today</span><span>'+c.doneToday+' · '+SC.num(c.kgToday)+' kg</span><span>Paid out today</span><span>'+SC.money(c.paidToday)+'</span><span>Cash held</span><span>'+SC.money(c.cash.balance)+'</span></div>'+
+        '<div class="btns"><button class="secondary" data-edit="'+esc(c.id)+'">Edit</button><button class="secondary" data-cash="'+esc(c.id)+'">Cash</button></div></div>';
+    }).join(""):'<div class="empty" style="grid-column:1/-1"><b>No collectors yet</b>Add a collector, then give them their phone number and PIN to sign in.</div>';
+    $$("#clist [data-edit]").forEach(function(b){ b.addEventListener("click",function(){ editCollector(b.dataset.edit); }); });
+    $$("#clist [data-cash]").forEach(function(b){ b.addEventListener("click",function(){ cashDialog(b.dataset.cash); }); });
+  }
+  $("#addColl").addEventListener("click",function(){ editCollector(null); });
+  function editCollector(id){
+    var c=id?S.collectors.filter(function(x){return x.id===id;})[0]:null;
+    var body='<div class="field"><label for="cName">Name</label><input type="text" id="cName" value="'+esc(c?c.name:"")+'"></div>'+
+      '<div class="field"><label for="cPhone">Phone number <span class="hint">They sign in with this</span></label><input type="tel" id="cPhone" inputmode="tel" value="'+esc(c?c.phone:"")+'"></div>'+
+      '<div class="field"><label for="cPin">'+(c?"New PIN":"PIN")+' <span class="hint">'+(c?"Leave blank to keep the current PIN. A new PIN signs them out of their phone.":"4 to 6 digits")+'</span></label><input type="password" id="cPin" inputmode="numeric" autocomplete="new-password" maxlength="6"></div>'+
+      '<label class="check"><input type="checkbox" id="cActive"'+(!c||c.active?" checked":"")+'> Active (can sign in and receive jobs)</label>'+
+      '<div class="err" id="cErr" role="alert"></div>';
+    SC.dialog(c?"Edit collector":"Add collector",body,'<button class="primary" id="cSave" type="button">Save</button>');
+    $("#cSave").addEventListener("click",function(){
+      var d={name:$("#cName").value,phone:$("#cPhone").value,pin:$("#cPin").value,active:$("#cActive").checked};
+      if(c) d.id=c.id;
+      var b=this; b.disabled=true; $("#cErr").textContent="";
+      call("d_collector_save",d).then(function(res){
+        b.disabled=false;
+        if(!res.ok){ $("#cErr").textContent=res.error; return; }
+        SC.closeDialog(); SC.toast(c?"Saved.":"Collector added. Share their phone number and PIN with them."); refresh(true);
+      }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#cErr").textContent="Couldn’t save. Check your connection."; });
+    });
+  }
+  function cashDialog(id){
+    var c=S.collectors.filter(function(x){return x.id===id;})[0]; if(!c) return;
+    var log=S.cash.filter(function(x){return x.id===id;}).slice(0,10).map(function(x){
+      return '<li>'+esc(SC.when(x.at))+' · <b>'+esc(x.type)+'</b> '+SC.money(x.amount)+(x.note?' · '+esc(x.note):"")+'</li>';
+    }).join("");
+    var body='<div class="kv"><span>Advances given</span><span>'+SC.money(c.cash.advances)+'</span><span>Returned</span><span>'+SC.money(c.cash.returns)+'</span><span>Paid out to customers (cash)</span><span>'+SC.money(c.cash.paidOut)+'</span><span><b>Cash they should be holding</b></span><span>'+SC.money(c.cash.balance)+'</span></div>'+
+      '<div class="sec">Record cash</div>'+
+      '<div class="row field"><div><label for="kType">Type</label><select id="kType"><option value="Advance">Advance (you give them cash)</option><option value="Return">Return (they give cash back)</option></select></div>'+
+      '<div><label for="kAmt">Amount</label><input type="number" id="kAmt" inputmode="decimal" min="0" step="0.01"></div></div>'+
+      '<div class="field"><label for="kNote">Note <span class="hint">Optional</span></label><input type="text" id="kNote"></div>'+
+      '<div class="err" id="kErr" role="alert"></div>'+
+      (log?'<div class="sec">Recent cash entries</div><ul class="cashlog">'+log+'</ul>':"");
+    SC.dialog(c.name+": cash",body,'<button class="primary" id="kSave" type="button">Record</button>');
+    $("#kSave").addEventListener("click",function(){
+      var b=this; b.disabled=true; $("#kErr").textContent="";
+      call("d_cash_add",{collectorId:id,type:$("#kType").value,amount:$("#kAmt").value,note:$("#kNote").value}).then(function(res){
+        b.disabled=false;
+        if(!res.ok){ $("#kErr").textContent=res.error; return; }
+        SC.closeDialog(); SC.toast("Recorded. Balance is now "+SC.money(res.cash.balance)+"."); refresh(true);
+      }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#kErr").textContent="Couldn’t save. Check your connection."; });
+    });
+  }
+
+  /* ---------- items and rates ---------- */
+  function rateRow(r){
+    r=r||{name:"",note:"",rate:"",active:true};
+    var d=document.createElement("div"); d.className="rate-row";
+    d.innerHTML='<input type="text" aria-label="Item name" placeholder="Item" value="'+esc(r.name)+'" data-k="name">'+
+      '<input type="text" aria-label="Note" placeholder="Note" value="'+esc(r.note)+'" data-k="note">'+
+      '<input type="number" aria-label="Rate per kg" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="'+esc(r.rate)+'" data-k="rate">'+
+      '<label class="check" style="margin:0"><input type="checkbox" data-k="active"'+(r.active?" checked":"")+' aria-label="Shown to customers"></label>'+
+      '<button class="del" type="button" aria-label="Remove item">×</button>';
+    d.querySelector(".del").addEventListener("click",function(){ d.remove(); });
+    return d;
+  }
+  function loadRates(){
+    $("#rateErr").textContent="";
+    call("d_rates_get").then(function(res){
+      if(!res.ok) return;
+      var box=$("#rateRows"); box.innerHTML="";
+      res.rates.forEach(function(r){ box.appendChild(rateRow(r)); });
+    }).catch(function(e){ if(e.message!=="auth") SC.toast("Couldn’t load the rates."); });
+  }
+  $("#addRate").addEventListener("click",function(){ var r=rateRow(); $("#rateRows").appendChild(r); r.querySelector("input").focus(); });
+  $("#saveRates").addEventListener("click",function(){
+    var rates=$$("#rateRows .rate-row").map(function(row){
+      var g=function(k){ return row.querySelector('[data-k="'+k+'"]'); };
+      return {name:g("name").value,note:g("note").value,rate:g("rate").value===""?0:g("rate").value,active:g("active").checked};
+    });
+    var b=this; b.disabled=true; $("#rateErr").textContent="";
+    call("d_rates_save",{rates:rates}).then(function(res){
+      b.disabled=false;
+      if(!res.ok){ $("#rateErr").textContent=res.error; return; }
+      var box=$("#rateRows"); box.innerHTML=""; res.rates.forEach(function(r){ box.appendChild(rateRow(r)); });
+      SC.toast("Saved. Customers see the new rates next time they open the app online.");
+    }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#rateErr").textContent="Couldn’t save. Check your connection."; });
+  });
+
+  /* ---------- reports ---------- */
+  function iso(d){ var m=d.getMonth()+1, x=d.getDate(); return d.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(x<10?"0":"")+x; }
+  $("#range").addEventListener("change",function(){ var c=this.value==="custom"; $("#from").hidden=!c; $("#to").hidden=!c; });
+  function rangeDates(){
+    var v=$("#range").value, now=new Date(), from=new Date(now);
+    if(v==="today"){} else if(v==="7") from.setDate(now.getDate()-6); else if(v==="30") from.setDate(now.getDate()-29);
+    else if(v==="month") from=new Date(now.getFullYear(),now.getMonth(),1);
+    else return {from:$("#from").value,to:$("#to").value};
+    return {from:iso(from),to:iso(now)};
+  }
+  function table(head,rows){
+    return '<div class="tbl-wrap"><table class="tbl"><thead><tr>'+head.map(function(h,i){return '<th'+(i?' class="num"':"")+'>'+h+'</th>';}).join("")+'</tr></thead><tbody>'+
+      rows.map(function(r){ return '<tr>'+r.map(function(c,i){return '<td'+(i?' class="num"':"")+'>'+c+'</td>';}).join("")+'</tr>'; }).join("")+'</tbody></table></div>';
+  }
+  function runReport(){
+    var r=rangeDates(); var b=$("#runReport"); b.disabled=true;
+    call("d_report",{from:r.from,to:r.to}).then(function(res){
+      b.disabled=false;
+      if(!res.ok){ $("#repOut").innerHTML='<div class="empty"><b>'+esc(res.error)+'</b></div>'; return; }
+      lastReport=res; $("#csv").hidden=!res.rows.length;
+      if(!res.totals.jobs){ $("#repOut").innerHTML='<div class="empty"><b>No completed pickups</b>Nothing was completed between '+esc(res.from)+' and '+esc(res.to)+'.</div>'; return; }
+      $("#repOut").innerHTML=
+        '<div class="stats"><div class="stat static"><div class="n">'+res.totals.jobs+'</div><div class="l">pickups completed</div></div><div class="stat static"><div class="n">'+SC.num(res.totals.kg)+'</div><div class="l">kg collected</div></div><div class="stat static"><div class="n">'+SC.money(res.totals.paid)+'</div><div class="l">paid to customers</div></div></div>'+
+        '<div class="card"><h2>By item</h2>'+table(["Item","kg","Amount"],res.byType.map(function(x){return [esc(x.name),SC.num(x.kg),SC.money(x.amount)];}))+'</div>'+
+        '<div class="card"><h2>By collector</h2>'+table(["Collector","Pickups","kg","Paid"],res.byCollector.map(function(x){return [esc(x.name),x.jobs,SC.num(x.kg),SC.money(x.paid)];}))+'</div>'+
+        '<div class="card"><h2>By day</h2>'+table(["Day","Pickups","kg","Paid"],res.byDay.map(function(x){return [esc(x.day),x.jobs,SC.num(x.kg),SC.money(x.paid)];}))+'</div>';
+    }).catch(function(e){ b.disabled=false; if(e.message!=="auth") SC.toast("Couldn’t load the report. Check your connection."); });
+  }
+  $("#runReport").addEventListener("click",runReport);
+  $("#csv").addEventListener("click",function(){
+    if(!lastReport) return;
+    var q=function(v){ v=String(v==null?"":v); if(/^[=+\-@]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; };
+    var lines=[["Code","Day","Customer","Collector","Items","kg","Paid","Payment","Address","Details"].map(q).join(",")];
+    lastReport.rows.forEach(function(r){ lines.push([r.code,r.day,r.name,r.collector,r.types,r.kg,r.paid,r.method,r.addr,r.details.replace(/\n/g,"; ")].map(q).join(",")); });
+    var blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="scrapcall-"+lastReport.from+"-to-"+lastReport.to+".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  /* ---------- go ---------- */
+  SC.pwa("#installBtn");
+  if(token) start(); else showLogin("");
+})();
+</script>
+</body>
+</html>

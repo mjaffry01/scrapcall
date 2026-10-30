@@ -1,7 +1,12 @@
-// ScrapCall service worker: lets the app open with no signal.
-// Change CACHE to "scrapcall-v2" (and so on) whenever you update the app files.
-var CACHE = "scrapcall-v3";
-var SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
+// ScrapCall service worker: lets the customer, collector and director apps open with no signal.
+// Change CACHE to "scrapcall-v5" (and so on) whenever you update any app file.
+var CACHE = "scrapcall-v4";
+var SHELL = [
+  "./", "index.html", "collector.html", "director.html",
+  "common.css", "common.js", "config.js",
+  "manifest.webmanifest", "collector.webmanifest", "director.webmanifest",
+  "icon-192.png", "icon-512.png"
+];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
@@ -15,6 +20,17 @@ self.addEventListener("activate", function (e) {
   );
 });
 
+function networkFirst(req, fallbackKey) {
+  return fetch(req).then(function (res) {
+    if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
+    return res;
+  }).catch(function () {
+    return caches.match(req, { ignoreSearch: true }).then(function (r) {
+      return r || (fallbackKey ? caches.match(fallbackKey) : undefined);
+    });
+  });
+}
+
 self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET") return;
@@ -23,21 +39,13 @@ self.addEventListener("fetch", function (e) {
   // Never cache calls to the Google Sheet backend
   if (/script\.google\.com$|googleusercontent\.com$/.test(url.hostname)) return;
 
-  // Opening the app: try the network first so updates arrive, fall back to the saved copy
-  if (req.mode === "navigate") {
-    e.respondWith(
-      fetch(req).then(function (res) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put("index.html", copy); });
-        return res;
-      }).catch(function () {
-        return caches.match("index.html").then(function (r) { return r || caches.match("./"); });
-      })
-    );
-    return;
-  }
+  // Opening any of the apps: network first so updates arrive, saved copy when offline
+  if (req.mode === "navigate") { e.respondWith(networkFirst(req, "index.html")); return; }
 
-  // Everything else (fonts, icons): saved copy first, refreshed in the background
+  // The settings file holds your Google link, so always try the network first
+  if (/\/config\.js$/.test(url.pathname)) { e.respondWith(networkFirst(req)); return; }
+
+  // Everything else (styles, scripts, fonts, icons): saved copy first, refreshed in the background
   e.respondWith(
     caches.match(req).then(function (hit) {
       var net = fetch(req).then(function (res) {

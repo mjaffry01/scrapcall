@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ScrapCall Collector</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f4c43">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="collector.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Collector">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+body{background:var(--surface2)}
+.shell{max-width:520px;margin:0 auto;min-height:100vh;background:var(--surface2);display:flex;flex-direction:column}
+.seg{display:flex;background:var(--surface);border-bottom:1px solid var(--line)}
+.seg button{flex:1;background:none;border:none;border-bottom:3px solid transparent;padding:14px 8px;font-weight:700;cursor:pointer;color:var(--muted);min-height:52px}
+.seg button[aria-selected="true"]{color:var(--brand);border-color:var(--brand)}
+@media (prefers-color-scheme: dark){.seg button[aria-selected="true"]{color:var(--hi);border-color:var(--hi)}}
+.content{padding:16px;flex:1}
+.job{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;cursor:pointer}
+.job:hover{border-color:var(--brand)}
+.j-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.j-name{font-weight:600;font-size:17px}
+.j-sub{color:var(--muted);font-size:14px}
+.j-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat .n{font-family:var(--head);font-size:30px;font-weight:700;line-height:1}
+.stat .l{color:var(--muted);font-size:13px;margin-top:4px}
+.cashcard{background:var(--brand);color:var(--brand-ink);border-radius:14px;padding:16px;margin-bottom:14px}
+.cashcard .n{font-family:var(--head);font-size:36px;font-weight:700;line-height:1}
+.cashcard .l{opacity:.85;font-size:14px;margin-top:4px}
+.actions{display:flex;flex-direction:column;gap:10px;margin:12px 0}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap}
+.btnrow>*{flex:1;min-width:130px}
+.sec{margin:14px 0 6px;font-weight:700;font-size:15px}
+.photos a{display:inline-block;margin:0 10px 6px 0}
+.wrow{display:grid;grid-template-columns:1fr 96px 74px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.wrow.mine .wn{font-weight:700}
+.wn small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.wrow input{min-height:44px;text-align:right}
+.wamt{text-align:right;font-weight:600}
+.total{display:flex;justify-content:space-between;font-family:var(--head);font-size:26px;font-weight:700;padding:12px 0 4px}
+.radio{display:flex;gap:10px}
+.radio label{flex:1;margin:0;border:1.5px solid var(--line);background:var(--surface2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;font-weight:600}
+.radio input{position:absolute;opacity:0}
+.radio input:checked + span{color:var(--brand)}
+.radio label:has(input:checked){border-color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,var(--surface))}
+.radio label:has(input:focus-visible){outline:3px solid var(--hi);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+  <div class="card">
+    <div class="logo">ScrapCall</div>
+    <p class="lede">Collector sign-in</p>
+    <div class="field">
+      <label for="lphone">Phone number</label>
+      <input type="tel" id="lphone" inputmode="tel" autocomplete="tel">
+    </div>
+    <div class="field">
+      <label for="lpin">PIN</label>
+      <input type="password" id="lpin" inputmode="numeric" autocomplete="current-password" maxlength="6">
+      <div class="err" id="loginErr" role="alert"></div>
+    </div>
+    <button class="primary block" id="loginBtn" type="button">Sign in</button>
+  </div>
+</div>
+
+<div class="shell" id="app" hidden>
+  <header class="top">
+    <div class="logo">ScrapCall<small id="hello">Collector</small></div>
+    <div class="top-actions">
+      <button class="chip-btn" id="installBtn" type="button" hidden>Install app</button>
+      <button class="chip-btn" id="signOut" type="button">Sign out</button>
+    </div>
+  </header>
+  <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Online</span><span id="qInfo" class="pill warn" style="margin-left:auto" hidden></span></div>
+  <div class="seg" role="tablist">
+    <button role="tab" id="tabJobs" aria-selected="true">My jobs</button>
+    <button role="tab" id="tabToday" aria-selected="false">Today</button>
+  </div>
+  <div class="content">
+    <section id="v-jobs" aria-label="My jobs"></section>
+    <section id="v-today" aria-label="Today" hidden></section>
+  </div>
+</div>
+
+<dialog id="dlg" aria-modal="true"></dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  var $=SC.$, $$=SC.$$, esc=SC.esc;
+  var TK="scrapcall_collector_token", QK="scrapcall_collector_queue", DK="scrapcall_collector_data";
+  var token=SC.load(TK,null);
+  var S=SC.load(DK,{jobs:[],cash:{balance:0},rates:[],name:"",today:""});
+  var queue=SC.load(QK,[]), tab="jobs", syncing=false, timer=null;
+
+  /* ---------- server calls ---------- */
+  function call(action,data){
+    data=data||{}; data.action=action; data.token=token;
+    return SC.api(data).then(function(res){
+      if(res&&res.auth){ signedOut("Please sign in again."); throw new Error("auth"); }
+      return res;
+    });
+  }
+  function showLogin(msg){ $("#login").hidden=false; $("#app").hidden=true; $("#loginErr").textContent=msg||""; }
+  function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); showLogin(msg); }
+  function start(){
+    $("#login").hidden=true; $("#app").hidden=false;
+    $("#hello").textContent="Hello, "+(S.name||"collector");
+    render(); processQueue().then(refresh);
+    clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
+  }
+
+  /* ---------- sign in / out ---------- */
+  $("#loginBtn").addEventListener("click",doLogin);
+  $("#lpin").addEventListener("keydown",function(e){ if(e.key==="Enter") doLogin(); });
+  function doLogin(){
+    var ph=$("#lphone").value, pin=$("#lpin").value; if(!ph||!pin) return;
+    var b=$("#loginBtn"); b.disabled=true; $("#loginErr").textContent="";
+    SC.api({action:"login",role:"collector",phone:ph,pin:pin}).then(function(res){
+      b.disabled=false;
+      if(res&&res.ok){
+        token=res.token; SC.save(TK,token); $("#lpin").value="";
+        if(S.name&&S.name!==res.name){ S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; queue=[]; SC.save(QK,queue); }
+        S.name=res.name; SC.save(DK,S); start();
+      } else $("#loginErr").textContent=(res&&res.error)||"Couldn’t sign in.";
+    }).catch(function(e){ b.disabled=false; $("#loginErr").textContent=SC.API_URL?"Couldn’t reach the server. You need a connection to sign in the first time.":e.message; });
+  }
+  $("#signOut").addEventListener("click",function(){
+    if(queue.length&&!confirm("You have "+queue.length+" saved update(s) that haven’t been sent. Sign out anyway? They will be lost.")) return;
+    queue=[]; SC.save(QK,queue); S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; SC.save(DK,S); signedOut("");
+  });
+
+  /* ---------- loading jobs ---------- */
+  function refresh(){
+    if(navigator.onLine===false||!token) return Promise.resolve();
+    return call("c_jobs").then(function(res){
+      if(!res.ok) return;
+      S={jobs:res.jobs,cash:res.cash,rates:res.rates,name:res.name,today:res.today};
+      applyQueue(); SC.save(DK,S); render();
+    }).catch(function(){});
+  }
+  SC.watchConnection(function(on){ if(on&&token) processQueue().then(refresh); });
+
+  /* ---------- offline queue: updates are saved here until they reach the office ---------- */
+  function uid(){ return "a"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function pendingCash(){
+    return queue.reduce(function(s,a){ return s+(a.type==="complete"&&a.method==="Cash"?a.est.amt:0); },0);
+  }
+  function applyQueue(){
+    queue.forEach(function(a){
+      var j=S.jobs.filter(function(x){return x.code===a.code;})[0]; if(!j) return;
+      if(a.type==="status"&&j.status==="Assigned") j.status="On the way";
+      if(a.type==="complete"&&j.status!=="Completed"){ j.status="Completed"; j.kg=a.est.kg; j.paid=a.est.amt; j.method=a.method; j.pending=true; j.details=a.est.lines; }
+      else if(a.type==="complete") j.pending=true;
+    });
+  }
+  function enqueue(a){ queue.push(a); SC.save(QK,queue); applyQueue(); SC.save(DK,S); render(); processQueue().then(refresh); }
+  function processQueue(){
+    if(syncing||!queue.length||navigator.onLine===false||!token) return Promise.resolve();
+    syncing=true;
+    function next(){
+      if(!queue.length){ syncing=false; return Promise.resolve(); }
+      var a=queue[0];
+      var req=a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note});
+      return req.then(function(res){
+        if(!(res&&res.ok)) SC.toast(a.code+": "+((res&&res.error)||"couldn’t be saved"));
+        queue.shift(); SC.save(QK,queue); return next();
+      }).catch(function(){ syncing=false; render(); });   // no connection or signed out: keep the queue
+    }
+    return next().then(function(){ syncing=false; render(); });
+  }
+
+  /* ---------- tabs ---------- */
+  function setTab(t){
+    tab=t;
+    $("#tabJobs").setAttribute("aria-selected",t==="jobs"?"true":"false");
+    $("#tabToday").setAttribute("aria-selected",t==="today"?"true":"false");
+    $("#v-jobs").hidden=(t!=="jobs"); $("#v-today").hidden=(t!=="today");
+  }
+  $("#tabJobs").addEventListener("click",function(){ setTab("jobs"); });
+  $("#tabToday").addEventListener("click",function(){ setTab("today"); });
+
+  /* ---------- screens ---------- */
+  function openJobs(){
+    return S.jobs.filter(function(j){ return j.status==="Assigned"||j.status==="On the way"; }).sort(function(a,b){
+      return (a.confirmedInput||a.day||"z").localeCompare(b.confirmedInput||b.day||"z");
+    });
+  }
+  function jobCard(j){
+    var when=j.confirmed?("At "+j.confirmed):("Wants "+SC.day(j.day)+", "+(j.slot||"").toLowerCase());
+    var tag=j.pending?'<span class="pill warn">Waiting to send</span>':(j.status==="On the way"?'<span class="pill live">On the way</span>':j.status==="Completed"?'<span class="pill ok">Completed</span>':'<span class="pill warn">To do</span>');
+    return '<button class="job" data-code="'+esc(j.code)+'"><div class="j-top"><span class="code">'+esc(j.code)+'</span>'+tag+'</div>'+
+      '<div class="j-name">'+esc(j.name)+'</div><div class="j-sub">'+esc(j.addr.slice(0,90))+'</div>'+
+      '<div class="j-sub">'+esc(when)+'</div><div class="j-sub">'+esc(j.types)+' — '+esc(j.qty)+'</div>'+
+      (j.status==="Completed"?'<div class="j-sub"><b>'+SC.kg(j.kg)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')</div>':
+       (j.phoneOk?"":'<div class="j-tags"><span class="pill warn">Office hasn’t confirmed this phone yet</span></div>'))+'</button>';
+  }
+  function render(){
+    var q=$("#qInfo"); q.hidden=!queue.length; q.textContent=queue.length+" waiting to send";
+    var jobs=openJobs();
+    $("#v-jobs").innerHTML=jobs.length?jobs.map(jobCard).join(""):'<div class="empty"><b>No jobs right now</b>When the office gives you a pickup, it shows up here.</div>';
+    var done=S.jobs.filter(function(j){return j.status==="Completed";});
+    var kg=done.reduce(function(s,j){return s+j.kg;},0), paid=done.reduce(function(s,j){return s+j.paid;},0);
+    var bal=SC.num((S.cash.balance||0)-pendingCash());
+    $("#v-today").innerHTML=
+      '<div class="cashcard"><div class="n">'+SC.money(bal)+'</div><div class="l">Cash you should be holding (cash from the office, minus cash paid to customers)</div></div>'+
+      '<div class="stats"><div class="stat"><div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat"><div class="n">'+SC.num(kg)+'</div><div class="l">kg collected</div></div><div class="stat"><div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
+      (done.length?'<h2>Done today</h2>'+done.map(jobCard).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>');
+    $$("#app .job").forEach(function(b){ b.addEventListener("click",function(){ openJob(b.dataset.code); }); });
+  }
+
+  /* ---------- one job ---------- */
+  function findJob(code){ return S.jobs.filter(function(j){return j.code===code;})[0]; }
+  function openJob(code){
+    var j=findJob(code); if(!j) return;
+    var wa=SC.waHref(j.phone);
+    var photos=(j.photos||[]).map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
+    var body=
+      '<p class="j-name">'+esc(j.name)+'</p>'+
+      '<div class="btnrow"><a class="linkbtn" href="'+esc(SC.telHref(j.phone))+'">Call</a>'+(wa?'<a class="linkbtn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp</a>':"")+
+      (j.alt?'<a class="linkbtn" href="'+esc(SC.telHref(j.alt))+'">Call other number</a>':"")+'</div>'+
+      '<p class="detail"><b>Address:</b> '+esc(j.addr)+'</p>'+
+      '<div class="btnrow"><a class="linkbtn" href="'+esc(SC.mapHref(j.addr))+'" target="_blank" rel="noopener">Open in Maps</a></div>'+
+      '<p class="detail"><b>When:</b> '+esc(j.confirmed?j.confirmed:SC.day(j.day)+", "+(j.slot||"").toLowerCase()+" (not confirmed)")+'</p>'+
+      '<p class="detail"><b>Scrap:</b> '+esc(j.types)+' — '+esc(j.qty)+'</p>'+
+      (j.notes?'<p class="detail"><b>Customer notes:</b> '+esc(j.notes)+'</p>':"")+
+      (photos?'<div class="photos detail">'+photos+'</div>':"")+
+      (j.phoneOk?"":'<p class="detail"><b>The office hasn’t confirmed this customer’s phone number yet.</b></p>')+
+      (j.status==="Completed"?'<div class="sec">Collected</div><p class="detail"><b>'+SC.kg(j.kg)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')'+(j.pending?" · waiting to send":"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"");
+    var foot="";
+    if(j.status==="Assigned") foot+='<button class="secondary" id="jWay" type="button">I’m on the way</button>';
+    if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="primary" id="jDone" type="button">Complete pickup</button>';
+    SC.dialog(j.code,body,foot||null);
+    var w=$("#jWay"); if(w) w.addEventListener("click",function(){
+      enqueue({id:uid(),type:"status",code:j.code,status:"On the way"}); SC.closeDialog();
+      SC.toast(navigator.onLine===false?"Saved. It will be sent when you’re online.":"Marked as on the way.");
+    });
+    var d=$("#jDone"); if(d) d.addEventListener("click",function(){ completeForm(j); });
+  }
+
+  /* ---------- weigh and pay ---------- */
+  function completeForm(j){
+    if(!S.rates.length){ SC.toast("The price list isn’t saved on this phone yet. Connect to the internet once."); return; }
+    var mine=(j.types||"").split(",").map(function(s){return s.trim();});
+    var rates=S.rates.slice().sort(function(a,b){ return (mine.indexOf(b.name)>-1)-(mine.indexOf(a.name)>-1); });
+    var rows=rates.map(function(r){
+      return '<div class="wrow'+(mine.indexOf(r.name)>-1?" mine":"")+'"><div class="wn">'+esc(r.name)+'<small>'+SC.money(r.rate)+' per kg'+(mine.indexOf(r.name)>-1?" · customer listed this":"")+'</small></div>'+
+        '<input type="number" inputmode="decimal" min="0" step="0.01" placeholder="kg" aria-label="kg of '+esc(r.name)+'" data-t="'+esc(r.name)+'" data-r="'+r.rate+'"><div class="wamt">0.00</div></div>';
+    }).join("");
+    var body='<p class="detail">Weigh each item and enter the kg. Prices come from the office rate list.</p>'+rows+
+      '<div class="total"><span>Total</span><span><span id="tKg">0</span> kg · <span id="tAmt">0.00</span></span></div>'+
+      '<div class="sec">How did you pay the customer?</div>'+
+      '<div class="radio"><label><input type="radio" name="method" value="Cash" checked><span>Cash</span></label><label><input type="radio" name="method" value="Digital"><span>Digital</span></label></div>'+
+      '<div class="field" style="margin-top:14px"><label for="jNote">Note <span class="hint">Optional</span></label><textarea id="jNote"></textarea></div>';
+    SC.dialog("Complete "+j.code,body,'<button class="primary" id="jSave" type="button" disabled>Save pickup</button>');
+    function calc(){
+      var kg=0,amt=0,items=[],lines=[];
+      $$("#dlg input[data-t]").forEach(function(i){
+        var k=SC.num(i.value), r=Number(i.dataset.r), a=SC.num(k*r);
+        i.parentNode.querySelector(".wamt").textContent=SC.money(a);
+        if(k>0){ kg=SC.num(kg+k); amt=SC.num(amt+a); items.push({t:i.dataset.t,kg:k}); lines.push(i.dataset.t+" "+k+" kg x "+SC.money(r)+" = "+SC.money(a)); }
+      });
+      $("#tKg").textContent=kg; $("#tAmt").textContent=SC.money(amt);
+      $("#jSave").disabled=!(kg>0);
+      return {kg:kg,amt:amt,items:items,lines:lines.join("\n")};
+    }
+    $$("#dlg input[data-t]").forEach(function(i){ i.addEventListener("input",calc); });
+    $("#jSave").addEventListener("click",function(){
+      var c=calc(); if(!(c.kg>0)) return;
+      var method=$("#dlg input[name=method]:checked").value;
+      if(!confirm("Save this pickup?\n"+c.kg+" kg, total "+SC.money(c.amt)+", paid by "+method.toLowerCase()+".")) return;
+      enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:$("#jNote").value,est:{kg:c.kg,amt:c.amt,lines:c.lines}});
+      SC.closeDialog();
+      SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"Pickup saved.");
+      setTab("today");
+    });
+  }
+
+  /* ---------- go ---------- */
+  SC.pwa("#installBtn");
+  if(token) start(); else showLogin("");
+})();
+</script>
+</body>
+</html>

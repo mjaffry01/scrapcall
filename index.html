@@ -248,10 +248,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   </main>
 </div>
 
+<script src="config.js"></script>
 <script>
 (function(){
-  // Paste your Google Apps Script web app link between the quotes (it ends in /exec).
-  var CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbx91sq7JR5hO6stX0Z_5ORqoiqSLMgNFrM7kXcmpPG8XC-7T0iXiY4wgXiT5x-gTuY/exec" };
+  // The Google link now lives in config.js, shared by all three apps.
+  var CONFIG = { API_URL: window.SCRAPCALL_API || "" };
 
   var TYPES=[
     {name:"Iron & steel",note:"Pipes, sheets, cans",rate:0.22},
@@ -544,7 +545,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   if("serviceWorker" in navigator){
     window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
   }
-  if(!CONFIG.API_URL)console.warn("ScrapCall: API_URL is empty. Requests will stay queued on this device.");
+  if(!CONFIG.API_URL)console.warn("ScrapCall: no Google link in config.js yet. Requests will stay queued on this device.");
 
   /* ---------- start ---------- */
   requests=load(K_REQ,[]);

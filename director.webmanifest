@@ -1,0 +1,15 @@
+{
+  "name": "ScrapCall Director",
+  "short_name": "Director",
+  "description": "Manage requests, collectors, rates and reports.",
+  "start_url": "director.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f4c43",
+  "theme_color": "#0f4c43",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
