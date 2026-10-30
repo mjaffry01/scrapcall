@@ -163,7 +163,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
             <div class="err" id="e-name"></div>
           </div>
           <div class="field">
-            <label for="phone-in">Phone number</label>
+            <label for="phone-in">Phone number <span class="hint">The office will call or message this number to confirm</span></label>
             <input type="tel" id="phone-in" autocomplete="tel" inputmode="tel">
             <div class="err" id="e-phone"></div>
           </div>
@@ -452,7 +452,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
         var s=STEPS.indexOf(it.status);
         r.cancelled=(it.status==="Cancelled");
         if(s>-1)r.stage=s;
-        r.confirmed=it.confirmed; r.collector=it.collector; r.collectorPhone=it.collectorPhone;
+        r.confirmed=it.confirmed; r.collector=it.collector; r.collectorPhone=it.collectorPhone; r.phoneConfirmed=!!it.phoneConfirmed;
       });
       save(K_REQ,requests); renderReqs();
     }).catch(function(){});
@@ -484,11 +484,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
       }
       var when=r.confirmed?'<p class="detail"><b>Confirmed time:</b> '+esc(r.confirmed)+'</p>':'<p class="detail"><b>Time:</b> '+esc(fmtDate(r.date))+', '+esc(r.slot.toLowerCase())+' (the office will confirm)</p>';
       var coll=r.collector?'<p class="detail"><b>Collector:</b> '+esc(r.collector)+(r.collectorPhone?' · '+esc(r.collectorPhone):'')+'</p>':"";
+      var pc=(r.status==="live"&&!r.cancelled)?'<p class="detail"><b>Phone:</b> '+(r.phoneConfirmed?"confirmed":"not confirmed yet. The office will contact you.")+'</p>':"";
       var ph=(r.photos||[]).map(function(p){return '<img class="thumb" alt="" src="'+p+'">'}).join("");
       return '<div class="req"><button class="req-head" data-open="'+esc(r.id)+'" aria-expanded="'+open+'">'+
         '<div class="req-top"><span class="code">'+esc(r.code||"Pending")+'</span>'+pillFor(r)+'</div>'+
         '<div class="req-sub">'+esc(r.types.join(", "))+'</div><div class="req-sub">'+esc(fmtDate(r.date))+', '+esc(r.slot.toLowerCase())+'</div></button>'+
-        '<div class="req-body" '+(open?"":"hidden")+'>'+steps+coll+when+
+        '<div class="req-body" '+(open?"":"hidden")+'>'+steps+coll+when+pc+
         '<p class="detail"><b>Address:</b> '+esc(r.addr)+'</p><p class="detail"><b>Amount:</b> '+esc(r.qty)+'</p>'+
         (r.notes?'<p class="detail"><b>Notes:</b> '+esc(r.notes)+'</p>':"")+
         (ph?'<div class="photos" style="margin-top:8px">'+ph+'</div>':"")+'</div></div>';

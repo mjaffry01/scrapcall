@@ -1,6 +1,6 @@
 // ScrapCall service worker: lets the app open with no signal.
 // Change CACHE to "scrapcall-v2" (and so on) whenever you update the app files.
-var CACHE = "scrapcall-v1";
+var CACHE = "scrapcall-v2";
 var SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", function (e) {
