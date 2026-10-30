@@ -1,8 +1,8 @@
 // ScrapCall service worker: lets the customer, collector and director apps open with no signal.
 // Change CACHE to "scrapcall-v5" (and so on) whenever you update any app file.
-var CACHE = "scrapcall-v4";
+var CACHE = "scrapcall-v5";
 var SHELL = [
-  "./", "index.html", "collector.html", "director.html",
+  "./", "index.html", "collector", "director", "collector.html", "director.html",
   "common.css", "common.js", "config.js",
   "manifest.webmanifest", "collector.webmanifest", "director.webmanifest",
   "icon-192.png", "icon-512.png"
@@ -40,7 +40,12 @@ self.addEventListener("fetch", function (e) {
   if (/script\.google\.com$|googleusercontent\.com$/.test(url.hostname)) return;
 
   // Opening any of the apps: network first so updates arrive, saved copy when offline
-  if (req.mode === "navigate") { e.respondWith(networkFirst(req, "index.html")); return; }
+  // Opening the collector or director app offline falls back to that app, not the customer page
+  if (req.mode === "navigate") {
+    var app = /\/(collector|director)(\.html)?$/.exec(url.pathname);
+    e.respondWith(networkFirst(req, app ? app[1] : "index.html"));
+    return;
+  }
 
   // The settings file holds your Google link, so always try the network first
   if (/\/config\.js$/.test(url.pathname)) { e.respondWith(networkFirst(req)); return; }

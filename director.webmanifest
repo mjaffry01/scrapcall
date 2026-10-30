@@ -2,7 +2,7 @@
   "name": "ScrapCall Director",
   "short_name": "Director",
   "description": "Manage requests, collectors, rates and reports.",
-  "start_url": "director.html",
+  "start_url": "director",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f4c43",

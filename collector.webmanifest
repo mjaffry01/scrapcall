@@ -2,7 +2,7 @@
   "name": "ScrapCall Collector",
   "short_name": "Collector",
   "description": "Your pickups. Works offline.",
-  "start_url": "collector.html",
+  "start_url": "collector",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
