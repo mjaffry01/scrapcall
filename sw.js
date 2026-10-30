@@ -1,9 +1,10 @@
 // ScrapCall service worker: lets the customer, collector and director apps open with no signal.
-// Change CACHE to "scrapcall-v5" (and so on) whenever you update any app file.
-var CACHE = "scrapcall-v5";
+// Change CACHE to "scrapcall-v7" (and so on) whenever you update any app file.
+var CACHE = "scrapcall-v6";
 var SHELL = [
   "./", "index.html", "collector", "director", "collector.html", "director.html",
   "common.css", "common.js", "config.js",
+  "leaflet.js", "leaflet.css", "map.js", "map.css",
   "manifest.webmanifest", "collector.webmanifest", "director.webmanifest",
   "icon-192.png", "icon-512.png"
 ];
@@ -38,6 +39,9 @@ self.addEventListener("fetch", function (e) {
 
   // Never cache calls to the Google Sheet backend
   if (/script\.google\.com$|googleusercontent\.com$/.test(url.hostname)) return;
+
+  // Map pictures and address searches come straight from OpenStreetMap; saving them would slowly fill the phone
+  if (/(^|\.)openstreetmap\.org$/.test(url.hostname)) return;
 
   // Opening any of the apps: network first so updates arrive, saved copy when offline
   // Opening the collector or director app offline falls back to that app, not the customer page

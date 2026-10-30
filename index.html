@@ -14,6 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="leaflet.css">
+<link rel="stylesheet" href="map.css">
 <style>
 :root{
   --bg:#e6eaea; --surface:#ffffff; --surface2:#f1f4f4; --ink:#1b2625; --muted:#5d6b69; --line:#cfd8d7;
@@ -182,6 +184,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
             <textarea id="addr" autocomplete="street-address" placeholder="House number, street, area, landmark"></textarea>
             <button type="button" class="link-btn" id="locBtn">Use my current location</button>
             <div class="hint" id="locNote"></div>
+            <div class="mapbar"><input type="search" id="mapQ" placeholder="Search for your street or area on the map" aria-label="Search the map"><button type="button" class="map-btn" id="mapFind">Search</button></div>
+            <div id="mapResults"></div>
+            <div id="pickMap" class="map-box"></div>
+            <div class="map-note" id="pinNote">Tap the map to drop a pin on your door or gate. Optional, but it helps the collector find you.</div>
+            <button type="button" class="link-btn" id="pinClear" hidden>Remove pin</button>
             <div class="err" id="e-addr"></div>
           </div>
         </div>
@@ -248,6 +255,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   </main>
 </div>
 
+<script src="leaflet.js"></script>
+<script src="map.js"></script>
 <script src="config.js"></script>
 <script>
 (function(){
@@ -268,7 +277,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   var K_REQ="scrapcall_requests", K_DRAFT="scrapcall_draft", K_RATES="scrapcall_rates";
 
   var $=function(s){return document.querySelector(s)};
-  var requests=[], photos=[], openId=null, toastT, ratesAt=null, ratesFresh=false;
+  var requests=[], photos=[], openId=null, toastT, ratesAt=null, ratesFresh=false, pin=null, picker=null;
 
   function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
   function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
@@ -299,6 +308,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     document.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===t?"true":"false")});
     $("#scroll").scrollTop=0;
     if(t==="reqs"){renderReqs();refreshStatuses()}
+    if(t==="new")ensurePicker();
   }
   document.querySelectorAll(".tab").forEach(function(b){b.addEventListener("click",function(){showTab(b.dataset.tab)})});
 
@@ -313,7 +323,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     $("#qBadge").hidden=!q; $("#qBadge").textContent=q;
     renderRates();
   }
-  window.addEventListener("online",function(){updateConn();syncQueue();refreshRates();refreshStatuses()});
+  window.addEventListener("online",function(){updateConn();syncQueue();refreshRates();refreshStatuses();ensurePicker()});
   window.addEventListener("offline",updateConn);
 
   function toast(msg){
@@ -331,31 +341,67 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   }
   $("#types").addEventListener("change",function(){saveDraft()});
   function saveDraft(){
-    save(K_DRAFT,{name:$("#name").value,phone:$("#phone-in").value,alt:$("#alt-phone").value,email:$("#email").value,addr:$("#addr").value,types:selectedTypes(),qty:$("#qty").selectedIndex,date:$("#date").value,slot:$("#slot").selectedIndex,notes:$("#notes").value});
+    save(K_DRAFT,{name:$("#name").value,phone:$("#phone-in").value,alt:$("#alt-phone").value,email:$("#email").value,addr:$("#addr").value,types:selectedTypes(),qty:$("#qty").selectedIndex,date:$("#date").value,slot:$("#slot").selectedIndex,notes:$("#notes").value,lat:pin?pin.lat:null,lng:pin?pin.lng:null});
   }
   function restoreDraft(){
     var d=load(K_DRAFT,null); if(!d)return;
     $("#name").value=d.name||""; $("#phone-in").value=d.phone||""; $("#alt-phone").value=d.alt||""; $("#email").value=d.email||""; $("#addr").value=d.addr||"";
     $("#qty").selectedIndex=d.qty||0; $("#slot").selectedIndex=d.slot||0; if(d.date)$("#date").value=d.date; $("#notes").value=d.notes||"";
     document.querySelectorAll("#types input").forEach(function(i){i.checked=(d.types||[]).indexOf(i.value)>-1});
+    pin=(window.SCMap&&SCMap.valid(d.lat,d.lng))?{lat:+d.lat,lng:+d.lng}:null; pinUi();
   }
   ["name","phone-in","alt-phone","email","addr","qty","date","slot","notes"].forEach(function(id){
     $("#"+id).addEventListener("input",saveDraft); $("#"+id).addEventListener("change",saveDraft);
   });
   (function(){var d=new Date();d.setDate(d.getDate()+1);$("#date").min=new Date().toISOString().slice(0,10);$("#date").value=d.toISOString().slice(0,10)})();
 
+  /* ---------- map pin (OpenStreetMap, free) ---------- */
+  function pinUi(){
+    $("#pinClear").hidden=!pin;
+    $("#pinNote").textContent=pin?"Pin saved. Drag it or tap the map to move it.":"Tap the map to drop a pin on your door or gate. Optional, but it helps the collector find you.";
+  }
+  function setPin(lat,lng){
+    pin=(window.SCMap&&SCMap.valid(lat,lng))?{lat:+lat,lng:+lng}:null;
+    pinUi(); saveDraft();
+  }
+  function fillAddress(lat,lng,name){
+    if($("#addr").value.trim()||!isOnline())return;
+    if(name){$("#addr").value=name;saveDraft();return}
+    SCMap.reverse(lat,lng).then(function(a){ if(a&&!$("#addr").value.trim()){$("#addr").value=a;saveDraft()} });
+  }
+  function ensurePicker(){
+    if(picker){picker.invalidate();return}
+    var box=$("#pickMap");
+    if(!window.SCMap)return;
+    if(!SCMap.ok()||!isOnline()){SCMap.offNote(box,"The map needs an internet connection. You can still tap “Use my current location”, or just type your address.");return}
+    picker=SCMap.picker(box,{lat:pin&&pin.lat,lng:pin&&pin.lng,onChange:function(lat,lng,how){setPin(lat,lng);fillAddress(lat,lng)}});
+  }
   $("#locBtn").addEventListener("click",function(){
     var n=$("#locNote");
-    if(!navigator.geolocation){n.textContent="Location isn’t available here. Type your address instead.";return}
+    if(!window.SCMap){n.textContent="Location isn’t available here. Type your address instead.";return}
     n.textContent="Finding your location…";
-    navigator.geolocation.getCurrentPosition(function(p){
-      var s="GPS pin: "+p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5);
-      n.textContent="Location saved. "+s+". Add a landmark above to help the collector.";
-      n.dataset.pin=s;
-    },function(){
-      n.textContent="Couldn’t get your location. Allow location access, or type your address.";
-    },{timeout:8000});
+    SCMap.locate().then(function(p){
+      setPin(p.lat,p.lng); n.textContent="Location saved.";
+      if(picker)picker.set(p.lat,p.lng);
+      fillAddress(p.lat,p.lng);
+    }).catch(function(){
+      n.textContent="Couldn’t get your location. Allow location access, tap the map, or type your address.";
+    });
   });
+  $("#mapFind").addEventListener("click",function(){
+    var box=$("#mapResults"), q=$("#mapQ").value||$("#addr").value;
+    if(!window.SCMap)return;
+    if(!isOnline()){box.innerHTML='<p class="map-note">Search needs an internet connection.</p>';return}
+    box.innerHTML='<p class="map-note">Searching…</p>';
+    SCMap.geocode(q).then(function(res){
+      SCMap.showResults(box,res,function(r){
+        setPin(r.lat,r.lng); ensurePicker(); if(picker)picker.set(r.lat,r.lng);
+        fillAddress(r.lat,r.lng,r.name);
+      });
+    }).catch(function(){box.innerHTML='<p class="map-note">Search isn’t available right now. Tap the map instead.</p>'});
+  });
+  $("#mapQ").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();$("#mapFind").click()}});
+  $("#pinClear").addEventListener("click",function(){setPin(null,null);if(picker)picker.clear()});
 
   /* photos: resized so they fit in device storage and upload quickly */
   function renderPhotos(){
@@ -410,7 +456,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     var r={
       id:"c"+Date.now().toString(36)+Math.random().toString(36).slice(2,8), code:null, status:"queued", stage:-1, created:Date.now(),
       name:$("#name").value.trim(), phone:$("#phone-in").value.trim(), alt:$("#alt-phone").value.trim(), email:$("#email").value.trim(),
-      addr:$("#addr").value.trim()+($("#locNote").dataset.pin?" ("+$("#locNote").dataset.pin+")":""),
+      addr:$("#addr").value.trim(), lat:pin?pin.lat:null, lng:pin?pin.lng:null,
       types:selectedTypes(), qty:$("#qty").value, date:$("#date").value, slot:$("#slot").value,
       notes:$("#notes").value.trim(), photos:photos.slice()
     };
@@ -421,7 +467,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     }
     ["name","phone-in","alt-phone","email","addr","notes"].forEach(function(id){$("#"+id).value=""});
     document.querySelectorAll("#types input").forEach(function(i){i.checked=false});
-    photos=[]; renderPhotos(); $("#locNote").textContent=""; delete $("#locNote").dataset.pin;
+    photos=[]; renderPhotos(); $("#locNote").textContent=""; setPin(null,null); if(picker)picker.clear(); $("#mapQ").value=""; $("#mapResults").innerHTML="";
     try{localStorage.removeItem(K_DRAFT)}catch(e){}
     openId=r.id; updateConn();
     if(isOnline())syncQueue();
@@ -440,7 +486,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     var sent=[], failed=0, chain=Promise.resolve();
     q.forEach(function(r){
       chain=chain.then(function(){
-        return api({action:"submit",clientId:r.id,name:r.name,phone:r.phone,alt:r.alt||"",email:r.email||"",addr:r.addr,types:r.types,qty:r.qty,date:r.date,slot:r.slot,notes:r.notes,photos:r.photos||[]})
+        return api({action:"submit",clientId:r.id,name:r.name,phone:r.phone,alt:r.alt||"",email:r.email||"",addr:r.addr,lat:r.lat==null?"":r.lat,lng:r.lng==null?"":r.lng,types:r.types,qty:r.qty,date:r.date,slot:r.slot,notes:r.notes,photos:r.photos||[]})
           .then(function(res){
             if(res&&res.ok){r.status="live";r.stage=0;r.code=res.code;r.sentAt=Date.now();r.photos=[];sent.push(r)}
             else{r.status="queued";failed++}
@@ -553,7 +599,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   var cached=load(K_RATES,null);
   if(cached&&cached.types&&cached.types.length){TYPES=cached.types;ratesAt=cached.at}
   buildTypes(); restoreDraft(); renderPhotos(); updateConn(); renderReqs();
-  syncQueue(); refreshRates(); refreshStatuses();
+  syncQueue(); refreshRates(); refreshStatuses(); ensurePicker();
 })();
 </script>
 </body>

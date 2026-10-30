@@ -16,6 +16,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="leaflet.css">
+<link rel="stylesheet" href="map.css">
 <style>
 .wrap{max-width:1100px;margin:0 auto;padding:16px}
 .dnav{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
@@ -89,6 +91,7 @@
   <nav class="dnav" role="tablist" aria-label="Director sections">
     <button class="dtab" role="tab" data-v="overview" aria-selected="true">Overview</button>
     <button class="dtab" role="tab" data-v="requests" aria-selected="false">Requests <span class="nbadge" id="newBadge" hidden>0</span></button>
+    <button class="dtab" role="tab" data-v="map" aria-selected="false">Map</button>
     <button class="dtab" role="tab" data-v="collectors" aria-selected="false">Collectors</button>
     <button class="dtab" role="tab" data-v="rates" aria-selected="false">Items and rates</button>
     <button class="dtab" role="tab" data-v="reports" aria-selected="false">Reports</button>
@@ -114,6 +117,20 @@
       <div class="chips" id="chips" role="group" aria-label="Filter requests"></div>
       <div class="bar"><input class="grow" type="search" id="search" placeholder="Search name, phone, address, code"></div>
       <div class="rgrid" id="rlist"></div>
+    </section>
+
+    <section class="view" id="v-map" aria-label="Map" hidden>
+      <h1>Map</h1>
+      <p class="lede">Open requests on the map. Click a pin to see the customer and assign a collector. Pins close together can go to the same collector.</p>
+      <div class="bar">
+        <select id="mapFilter" aria-label="Show on the map">
+          <option value="open">All open requests</option><option value="new">New requests only</option><option value="active">With collectors only</option>
+        </select>
+        <span class="muted" id="mapCount"></span>
+      </div>
+      <div class="legend"><span><i class="p-new"></i>New</span><span><i class="p-assigned"></i>Assigned</span><span><i class="p-way"></i>On the way</span></div>
+      <div id="bigMap" class="map-box tall"></div>
+      <div class="card" id="mapNoPin" hidden></div>
     </section>
 
     <section class="view" id="v-collectors" aria-label="Collectors" hidden>
@@ -156,12 +173,16 @@
 <dialog id="dlg" aria-modal="true"></dialog>
 <div class="toast" id="toast" hidden></div>
 
+<script src="leaflet.js"></script>
+<script src="map.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
 (function(){
   var $=SC.$, $$=SC.$$, esc=SC.esc, TK="scrapcall_director_token";
   var STATUSES=["Received","Assigned","On the way","Completed","Cancelled"];
+  var dlgPicker=null;
+  $("#dlg").addEventListener("close",function(){ if(dlgPicker&&dlgPicker.map){ try{dlgPicker.map.remove();}catch(e){} } dlgPicker=null; });
   var token=SC.load(TK,null), S={requests:[],collectors:[],cash:[],today:""}, view="overview", filter="new", query="", lastReport=null, timer=null;
 
   /* ---------- server calls ---------- */
@@ -201,20 +222,21 @@
       renderAll();
     }).catch(function(e){ if(e.message!=="auth"&&!silent) SC.toast("Couldn’t load the latest data. Check your connection."); });
   }
-  SC.watchConnection(function(on){ if(on&&token&&!$("#app").hidden) refresh(true); });
+  SC.watchConnection(function(on){ if(on&&token&&!$("#app").hidden){ refresh(true); if(view==="map") renderMap(true); } });
 
   /* ---------- tabs ---------- */
   function setView(v){
     view=v;
     $$(".dtab").forEach(function(b){ b.setAttribute("aria-selected",b.dataset.v===v?"true":"false"); });
-    ["overview","requests","collectors","rates","reports"].forEach(function(n){ $("#v-"+n).hidden=(n!==v); });
+    ["overview","requests","map","collectors","rates","reports"].forEach(function(n){ $("#v-"+n).hidden=(n!==v); });
     window.scrollTo(0,0);
     if(v==="rates") loadRates();
+    if(v==="map") renderMap(true);
     if(v==="reports"&&!lastReport) runReport();
   }
   $$(".dtab").forEach(function(b){ b.addEventListener("click",function(){ setView(b.dataset.v); }); });
 
-  function renderAll(){ renderOverview(); renderRequests(); renderCollectors(); }
+  function renderAll(){ renderOverview(); renderRequests(); renderCollectors(); if(view==="map") renderMap(false); }
 
   /* ---------- overview ---------- */
   function stats(){
@@ -308,12 +330,16 @@
       '<div class="bar"><a class="linkbtn" href="'+esc(SC.telHref(r.phone))+'">Call '+esc(r.phone)+'</a>'+(wa?'<a class="linkbtn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp</a>':"")+
       (r.alt?'<a class="linkbtn" href="'+esc(SC.telHref(r.alt))+'">Call '+esc(r.alt)+'</a>':"")+'</div>'+
       (r.email?'<p class="detail"><b>Email:</b> <a href="mailto:'+esc(r.email)+'">'+esc(r.email)+'</a></p>':"")+
-      '<p class="detail"><b>Address:</b> '+esc(r.addr)+' · <a href="'+esc(SC.mapHref(r.addr))+'" target="_blank" rel="noopener">Open in Maps</a></p>'+
+      '<p class="detail"><b>Address:</b> '+esc(r.addr)+' · <a href="'+esc(window.SCMap?SCMap.viewHref(r):SC.mapHref(r.addr))+'" target="_blank" rel="noopener">Open in Maps</a></p>'+
       '<p class="detail"><b>Scrap:</b> '+esc(r.types)+' — '+esc(r.qty)+'</p>'+
       '<p class="detail"><b>Customer wants:</b> '+esc(SC.day(r.day))+', '+esc(r.slot.toLowerCase())+'</p>'+
       (r.notes?'<p class="detail"><b>Customer notes:</b> '+esc(r.notes)+'</p>':"")+
       (photos?'<div class="photos detail">'+photos+'</div>':"")+
       done+
+      '<div class="sec">Map pin</div>'+
+      '<div class="mapbar" id="rMapBar"><input type="search" id="rMapQ" aria-label="Search the map" placeholder="Search address or place" value="'+esc(r.addr.slice(0,120))+'"><button type="button" class="map-btn" id="rMapFind">Find</button></div>'+
+      '<div id="rMapResults"></div><div id="rMap" class="map-box small"></div>'+
+      '<div class="map-note" id="rPinNote"></div><button type="button" class="link-btn" id="rPinClear" hidden>Remove pin</button>'+
       '<div class="sec">Office</div>'+
       '<label class="check"><input type="checkbox" id="rPhone"'+(r.phoneOk?" checked":"")+'> Phone number confirmed</label>'+
       '<div class="row field"><div><label for="rColl">Collector</label><select id="rColl">'+collOpts+'</select></div>'+
@@ -323,6 +349,28 @@
       '<div class="field"><label for="rOffice">Office notes</label><textarea id="rOffice">'+esc(r.office)+'</textarea></div>'+
       '<div class="err" id="rErr" role="alert"></div>';
     SC.dialog(r.code,body,'<button class="primary" id="rSave" type="button">Save</button>');
+    var pinLat=r.lat, pinLng=r.lng, pinChanged=false;
+    function pinUi(){
+      var has=!!(window.SCMap&&SCMap.valid(pinLat,pinLng));
+      $("#rPinNote").textContent=has?"Pin set. Drag it or click the map to move it.":"No pin yet. Search for the address, or click the map.";
+      $("#rPinClear").hidden=!has;
+    }
+    if(mapOk()){
+      dlgPicker=SCMap.picker($("#rMap"),{lat:pinLat,lng:pinLng,onChange:function(la,ln){ pinLat=la; pinLng=ln; pinChanged=true; pinUi(); }});
+      setTimeout(function(){ if(dlgPicker) dlgPicker.invalidate(); },150);
+      $("#rMapFind").addEventListener("click",function(){
+        var box=$("#rMapResults"); box.innerHTML='<p class="map-note">Searching…</p>';
+        SCMap.geocode($("#rMapQ").value).then(function(res){
+          SCMap.showResults(box,res,function(x){ pinLat=x.lat; pinLng=x.lng; pinChanged=true; if(dlgPicker) dlgPicker.set(x.lat,x.lng); pinUi(); });
+        }).catch(function(){ box.innerHTML='<p class="map-note">Search isn’t available right now. Click the map instead.</p>'; });
+      });
+      $("#rMapQ").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); $("#rMapFind").click(); } });
+      $("#rPinClear").addEventListener("click",function(){ if(dlgPicker) dlgPicker.clear(); pinLat=null; pinLng=null; pinChanged=true; pinUi(); });
+    } else {
+      $("#rMapBar").hidden=true;
+      if(window.SCMap) SCMap.offNote($("#rMap"),"The map needs an internet connection.");
+    }
+    pinUi();
     $("#rColl").addEventListener("change",function(){
       var st=$("#rStatus");
       if(this.value&&st.value==="Received") st.value="Assigned";
@@ -335,6 +383,7 @@
       var t=$("#rTime").value; if(t!==r.confirmedInput) d.confirmedInput=t;
       var p=$("#rPhone").checked; if(p!==r.phoneOk) d.phoneOk=p;
       var o=$("#rOffice").value; if(o!==r.office) d.office=o;
+      if(pinChanged){ if(window.SCMap&&SCMap.valid(pinLat,pinLng)){ d.lat=pinLat; d.lng=pinLng; } else { d.lat=""; d.lng=""; } }
       if(Object.keys(d).length===1){ SC.closeDialog(); return; }
       if(d.status==="Cancelled"&&!confirm("Cancel request "+r.code+"? The customer will see it as cancelled.")) return;
       var b=this; b.disabled=true; $("#rErr").textContent="";
@@ -346,6 +395,49 @@
       }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#rErr").textContent="Couldn’t save. Check your connection and try again."; });
     });
   }
+
+  /* ---------- map of open requests ---------- */
+  var big=null, bigLayer=null;
+  function mapOk(){ return !!(window.SCMap&&SCMap.ok()&&navigator.onLine!==false); }
+  function mapClass(r){ return r.status==="Received"?"p-new":r.status==="On the way"?"p-way":"p-assigned"; }
+  function mapRows(){
+    var f=$("#mapFilter").value;
+    return S.requests.filter(function(r){
+      if(r.status==="Completed"||r.status==="Cancelled") return false;
+      if(f==="new") return r.status==="Received";
+      if(f==="active") return r.status==="Assigned"||r.status==="On the way";
+      return true;
+    });
+  }
+  function renderMap(refit){
+    var box=$("#bigMap"), rows=mapRows();
+    var nopin=rows.filter(function(r){ return !(window.SCMap&&SCMap.valid(r.lat,r.lng)); });
+    $("#mapCount").textContent=rows.length+" request"+(rows.length===1?"":"s")+" · "+(rows.length-nopin.length)+" on the map";
+    var card=$("#mapNoPin");
+    card.hidden=!nopin.length;
+    card.innerHTML=nopin.length?'<h2>No pin yet ('+nopin.length+')</h2><p class="detail">Open a request to search for its address and place a pin.</p>'+nopin.slice(0,12).map(function(r){
+      return '<div class="bar" style="justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px"><div><b>'+esc(r.name)+'</b> <span class="muted">'+esc(r.code)+'</span><div class="rc-sub">'+esc(r.addr.slice(0,80))+'</div></div><button class="secondary" data-open="'+esc(r.code)+'">Add pin</button></div>';
+    }).join(""):"";
+    $$("#mapNoPin [data-open]").forEach(function(b){ b.addEventListener("click",function(){ openRequest(b.dataset.open); }); });
+
+    if(!mapOk()){
+      if(big){ try{big.remove();}catch(e){} big=null; }
+      if(window.SCMap) SCMap.offNote(box,"The map needs an internet connection. Use the Requests tab to see addresses.");
+      return;
+    }
+    if(!big){ big=SCMap.create(box,{}); bigLayer=L.layerGroup().addTo(big); refit=true; }
+    big.invalidateSize(); bigLayer.clearLayers();
+    var pts=[];
+    rows.forEach(function(r){
+      if(!SCMap.valid(r.lat,r.lng)) return;
+      var m=L.marker([r.lat,r.lng],{icon:SCMap.pinIcon(r.code.replace("SC-",""),mapClass(r))}).addTo(bigLayer);
+      m.bindPopup('<b>'+esc(r.name)+'</b><br>'+esc(r.types)+'<br>'+esc(r.status)+(r.collector?" · "+esc(r.collector):" · unassigned")+'<br>'+esc(r.addr.slice(0,80))+'<br><button data-open>Open request</button>');
+      m.on("popupopen",function(e){ var b=e.popup.getElement().querySelector("[data-open]"); if(b) b.onclick=function(){ openRequest(r.code); }; });
+      pts.push([r.lat,r.lng]);
+    });
+    if(refit&&pts.length) big.fitBounds(pts,{padding:[40,40],maxZoom:16});
+  }
+  $("#mapFilter").addEventListener("change",function(){ renderMap(true); });
 
   /* ---------- collectors ---------- */
   function renderCollectors(){
@@ -470,7 +562,7 @@
     var q=function(v){ v=String(v==null?"":v); if(/^[=+\-@]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; };
     var lines=[["Code","Day","Customer","Collector","Items","kg","Paid","Payment","Address","Details"].map(q).join(",")];
     lastReport.rows.forEach(function(r){ lines.push([r.code,r.day,r.name,r.collector,r.types,r.kg,r.paid,r.method,r.addr,r.details.replace(/\n/g,"; ")].map(q).join(",")); });
-    var blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    var blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
     var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="scrapcall-"+lastReport.from+"-to-"+lastReport.to+".csv";
     document.body.appendChild(a); a.click(); a.remove();
   });

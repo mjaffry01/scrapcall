@@ -16,6 +16,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="leaflet.css">
+<link rel="stylesheet" href="map.css">
 <style>
 body{background:var(--surface2)}
 .shell{max-width:520px;margin:0 auto;min-height:100vh;background:var(--surface2);display:flex;flex-direction:column}
@@ -87,16 +89,24 @@ body{background:var(--surface2)}
   <div class="seg" role="tablist">
     <button role="tab" id="tabJobs" aria-selected="true">My jobs</button>
     <button role="tab" id="tabToday" aria-selected="false">Today</button>
+    <button role="tab" id="tabMap" aria-selected="false">Map</button>
   </div>
   <div class="content">
     <section id="v-jobs" aria-label="My jobs"></section>
     <section id="v-today" aria-label="Today" hidden></section>
+    <section id="v-map" aria-label="Map" hidden>
+      <div class="btnrow" style="margin-bottom:8px"><button class="secondary" id="meBtn" type="button">Show my location</button></div>
+      <div id="jobMap" class="map-box tall"></div>
+      <p class="map-note" id="mapNote"></p>
+    </section>
   </div>
 </div>
 
 <dialog id="dlg" aria-modal="true"></dialog>
 <div class="toast" id="toast" hidden></div>
 
+<script src="leaflet.js"></script>
+<script src="map.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
@@ -106,6 +116,11 @@ body{background:var(--surface2)}
   var token=SC.load(TK,null);
   var S=SC.load(DK,{jobs:[],cash:{balance:0},rates:[],name:"",today:""});
   var queue=SC.load(QK,[]), tab="jobs", syncing=false, timer=null;
+
+  function mapOk(){ return !!(window.SCMap&&SCMap.ok()&&navigator.onLine!==false); }
+  function validPin(j){ return !!(window.SCMap&&SCMap.valid(j.lat,j.lng)); }
+  function dirHref(j){ return window.SCMap?SCMap.dirHref(j):SC.mapHref(j.addr); }
+  function viewHref(j){ return window.SCMap?SCMap.viewHref(j):SC.mapHref(j.addr); }
 
   /* ---------- server calls ---------- */
   function call(action,data){
@@ -189,10 +204,13 @@ body{background:var(--surface2)}
     tab=t;
     $("#tabJobs").setAttribute("aria-selected",t==="jobs"?"true":"false");
     $("#tabToday").setAttribute("aria-selected",t==="today"?"true":"false");
-    $("#v-jobs").hidden=(t!=="jobs"); $("#v-today").hidden=(t!=="today");
+    $("#tabMap").setAttribute("aria-selected",t==="map"?"true":"false");
+    $("#v-jobs").hidden=(t!=="jobs"); $("#v-today").hidden=(t!=="today"); $("#v-map").hidden=(t!=="map");
+    if(t==="map") renderMap(true);
   }
   $("#tabJobs").addEventListener("click",function(){ setTab("jobs"); });
   $("#tabToday").addEventListener("click",function(){ setTab("today"); });
+  $("#tabMap").addEventListener("click",function(){ setTab("map"); });
 
   /* ---------- screens ---------- */
   function openJobs(){
@@ -221,7 +239,44 @@ body{background:var(--surface2)}
       '<div class="stats"><div class="stat"><div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat"><div class="n">'+SC.num(kg)+'</div><div class="l">kg collected</div></div><div class="stat"><div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
       (done.length?'<h2>Done today</h2>'+done.map(jobCard).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>');
     $$("#app .job").forEach(function(b){ b.addEventListener("click",function(){ openJob(b.dataset.code); }); });
+    if(tab==="map") renderMap(false);
   }
+
+  /* ---------- map of today's stops ---------- */
+  var cmap=null, clayer=null, mePin=null, jmap=null;
+  function renderMap(refit){
+    var box=$("#jobMap"), jobs=openJobs();
+    var nopin=jobs.filter(function(j){ return !validPin(j); }).length;
+    $("#mapNote").textContent=!jobs.length?"No open jobs to show.":(nopin?nopin+" job"+(nopin===1?" has":"s have")+" no pin. Open the job to get directions from the address.":"Numbers show the order of your jobs. Tap a pin for directions.");
+    $("#meBtn").hidden=!mapOk();
+    if(!mapOk()){
+      if(cmap){ try{cmap.remove();}catch(e){} cmap=null; mePin=null; }
+      if(window.SCMap) SCMap.offNote(box,"The map needs an internet connection. Your job list still works, and each job has a Directions button.");
+      return;
+    }
+    if(!cmap){ cmap=SCMap.create(box,{}); clayer=L.layerGroup().addTo(cmap); refit=true; }
+    cmap.invalidateSize(); clayer.clearLayers();
+    var pts=[];
+    jobs.forEach(function(j,i){
+      if(!validPin(j)) return;
+      var m=L.marker([j.lat,j.lng],{icon:SCMap.pinIcon(String(i+1),j.status==="On the way"?"p-way":"p-assigned")}).addTo(clayer);
+      m.bindPopup('<b>'+(i+1)+'. '+esc(j.name)+'</b><br>'+esc(j.addr.slice(0,80))+'<br><a href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">Directions</a><br><button data-open>Open job</button>');
+      m.on("popupopen",function(e){ var b=e.popup.getElement().querySelector("[data-open]"); if(b) b.onclick=function(){ openJob(j.code); }; });
+      pts.push([j.lat,j.lng]);
+    });
+    if(mePin) mePin.addTo(cmap);
+    if(refit&&pts.length) cmap.fitBounds(pts,{padding:[40,40],maxZoom:16});
+  }
+  $("#meBtn").addEventListener("click",function(){
+    if(!cmap||!window.SCMap) return;
+    SCMap.locate().then(function(p){
+      if(mePin) mePin.setLatLng([p.lat,p.lng]); else mePin=L.marker([p.lat,p.lng],{icon:SCMap.pinIcon("","p-me")});
+      mePin.addTo(cmap);
+      var pts=openJobs().filter(validPin).map(function(j){ return [j.lat,j.lng]; }); pts.push([p.lat,p.lng]);
+      cmap.fitBounds(pts,{padding:[40,40],maxZoom:16});
+    }).catch(function(){ SC.toast("Couldn’t get your location. Allow location access in your browser settings."); });
+  });
+  $("#dlg").addEventListener("close",function(){ if(jmap){ try{jmap.remove();}catch(e){} jmap=null; } });
 
   /* ---------- one job ---------- */
   function findJob(code){ return S.jobs.filter(function(j){return j.code===code;})[0]; }
@@ -234,7 +289,8 @@ body{background:var(--surface2)}
       '<div class="btnrow"><a class="linkbtn" href="'+esc(SC.telHref(j.phone))+'">Call</a>'+(wa?'<a class="linkbtn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp</a>':"")+
       (j.alt?'<a class="linkbtn" href="'+esc(SC.telHref(j.alt))+'">Call other number</a>':"")+'</div>'+
       '<p class="detail"><b>Address:</b> '+esc(j.addr)+'</p>'+
-      '<div class="btnrow"><a class="linkbtn" href="'+esc(SC.mapHref(j.addr))+'" target="_blank" rel="noopener">Open in Maps</a></div>'+
+      '<div class="btnrow"><a class="linkbtn" href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">Directions</a><a class="linkbtn" href="'+esc(viewHref(j))+'" target="_blank" rel="noopener">View on map</a></div>'+
+      (validPin(j)&&mapOk()?'<div id="jMap" class="map-box small"></div>':"")+
       '<p class="detail"><b>When:</b> '+esc(j.confirmed?j.confirmed:SC.day(j.day)+", "+(j.slot||"").toLowerCase()+" (not confirmed)")+'</p>'+
       '<p class="detail"><b>Scrap:</b> '+esc(j.types)+' — '+esc(j.qty)+'</p>'+
       (j.notes?'<p class="detail"><b>Customer notes:</b> '+esc(j.notes)+'</p>':"")+
@@ -245,6 +301,11 @@ body{background:var(--surface2)}
     if(j.status==="Assigned") foot+='<button class="secondary" id="jWay" type="button">I’m on the way</button>';
     if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="primary" id="jDone" type="button">Complete pickup</button>';
     SC.dialog(j.code,body,foot||null);
+    if(validPin(j)&&mapOk()){
+      jmap=SCMap.create($("#jMap"),{center:{lat:j.lat,lng:j.lng,zoom:16}});
+      L.marker([j.lat,j.lng],{icon:SCMap.pinIcon("","p-set")}).addTo(jmap);
+      setTimeout(function(){ if(jmap) jmap.invalidateSize(); },150);
+    }
     var w=$("#jWay"); if(w) w.addEventListener("click",function(){
       enqueue({id:uid(),type:"status",code:j.code,status:"On the way"}); SC.closeDialog();
       SC.toast(navigator.onLine===false?"Saved. It will be sent when you’re online.":"Marked as on the way.");
