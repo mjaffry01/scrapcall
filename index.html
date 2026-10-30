@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ScrapCall">
+<title>ScrapCall</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f4c43">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e6eaea; --surface:#ffffff; --surface2:#f1f4f4; --ink:#1b2625; --muted:#5d6b69; --line:#cfd8d7;
+  --brand:#0f4c43; --brand-ink:#ffffff; --hi:#f0b323; --hi-ink:#2a2000;
+  --ok:#17795c; --bad:#b3261e;
+  --head:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1514; --surface:#18221f; --surface2:#1f2b28; --ink:#e8efee; --muted:#9fb0ad; --line:#2d3c39;
+    --brand:#2f9d86; --brand-ink:#04120f; --ok:#4cc7a3; --bad:#ff8a80; color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+
+.stage{display:flex;justify-content:center;gap:48px}
+.aside{display:none}
+.phone{width:100%;max-width:460px;min-height:100vh;background:var(--surface2);display:flex;flex-direction:column;position:relative}
+@media (min-width:900px){
+  .stage{padding:32px 24px;align-items:flex-start}
+  .aside{display:block;width:280px;position:sticky;top:32px;padding-top:12px}
+  .aside h2{font-family:var(--head);font-size:30px;line-height:1.05;margin:0 0 12px}
+  .aside p{color:var(--muted);font-size:15px;margin:0 0 12px}
+  .phone{min-height:0;height:min(860px,calc(100vh - 64px));border-radius:28px;border:1px solid var(--line);overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.18)}
+}
+
+.top{background:var(--brand);color:var(--brand-ink);padding:14px 16px 12px}
+.logo{font-family:var(--head);font-weight:700;font-size:26px;letter-spacing:.2px;line-height:1}
+.logo small{display:block;font-family:var(--body);font-weight:500;font-size:12px;opacity:.8;letter-spacing:0;margin-top:3px}
+
+.conn{display:flex;align-items:center;gap:10px;padding:9px 16px;font-size:14px;font-weight:500;background:var(--surface);border-bottom:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none}
+.conn.off{background:var(--hi);color:var(--hi-ink);border-color:transparent}
+.conn.off .dot{background:var(--hi-ink)}
+
+.scroll{flex:1;overflow-y:auto;padding:16px 16px 96px}
+.view[hidden]{display:none}
+h1{font-family:var(--head);font-size:30px;line-height:1.05;margin:4px 0 6px}
+.lede{color:var(--muted);margin:0 0 16px;font-size:15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+label,.lbl{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+.hint{font-weight:400;color:var(--muted);font-size:13px}
+input[type=text],input[type=tel],input[type=date],select,textarea{width:100%;background:var(--surface2);border:1.5px solid var(--line);border-radius:10px;padding:12px;min-height:46px}
+textarea{min-height:76px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--brand)}
+.field{margin-bottom:14px}
+.err{color:var(--bad);font-size:13px;margin-top:5px}
+.invalid{border-color:var(--bad)!important}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.link-btn{background:none;border:none;color:var(--brand);font-weight:600;padding:6px 0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .link-btn{color:var(--hi)}}
+
+.types{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.type{position:relative}
+.type input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0}
+.type span{display:flex;flex-direction:column;border:1.5px solid var(--line);background:var(--surface2);border-radius:10px;padding:10px 12px;min-height:56px;justify-content:center;font-weight:600;font-size:15px}
+.type span em{font-style:normal;font-weight:400;font-size:12px;color:var(--muted)}
+.type input:checked + span{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,var(--surface));box-shadow:inset 0 0 0 1px var(--brand)}
+.type input:focus-visible + span{outline:3px solid var(--hi);outline-offset:2px}
+
+.photos{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{width:72px;height:72px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+.thumbwrap{position:relative}
+.thumbwrap button{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:none;background:var(--ink);color:var(--surface);cursor:pointer;font-size:14px;line-height:1}
+.add-photo{width:72px;height:72px;border:1.5px dashed var(--muted);border-radius:10px;background:transparent;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600}
+
+.primary{width:100%;background:var(--brand);color:var(--brand-ink);border:none;border-radius:12px;min-height:54px;font-weight:700;font-size:17px;cursor:pointer;padding:0 16px}
+.primary:hover{filter:brightness(1.08)}
+.primary.queue{background:var(--hi);color:var(--hi-ink)}
+
+.rate{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+.rate:last-child{border-bottom:none}
+.rate b{font-size:16px}.rate small{display:block;color:var(--muted);font-size:13px}
+.price{font-family:var(--head);font-size:26px;font-weight:700;white-space:nowrap}
+.price small{display:inline;font-family:var(--body);font-size:12px;font-weight:400;color:var(--muted)}
+
+.req{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.req-head{width:100%;text-align:left;background:none;border:none;padding:14px 16px;cursor:pointer;display:block}
+.req-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.code{font-family:var(--head);font-weight:700;font-size:21px}
+.pill{font-size:12.5px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);white-space:nowrap}
+.pill.queued{background:var(--hi);color:var(--hi-ink);border-color:transparent}
+.pill.done{background:var(--ok);color:#fff;border-color:transparent}
+.pill.live{background:color-mix(in srgb,var(--brand) 18%,var(--surface));border-color:var(--brand)}
+.pill.cancel{background:var(--bad);color:#fff;border-color:transparent}
+.req-sub{color:var(--muted);font-size:14px}
+.req-body{padding:0 16px 16px;border-top:1px solid var(--line)}
+.req-body[hidden]{display:none}
+.steps{list-style:none;margin:14px 0 8px;padding:0}
+.steps li{position:relative;padding:0 0 14px 28px;color:var(--muted);font-size:15px}
+.steps li::before{content:"";position:absolute;left:3px;top:5px;width:12px;height:12px;border-radius:50%;border:2px solid var(--line);background:var(--surface)}
+.steps li::after{content:"";position:absolute;left:8px;top:19px;bottom:-3px;width:2px;background:var(--line)}
+.steps li:last-child::after{display:none}
+.steps li.done{color:var(--ink)}
+.steps li.done::before{background:var(--ok);border-color:var(--ok)}
+.steps li.now{color:var(--ink);font-weight:600}
+.steps li.now::before{background:var(--hi);border-color:var(--hi-ink)}
+.detail{font-size:14px;color:var(--muted);margin:4px 0}
+.detail b{color:var(--ink);font-weight:600}
+.empty{text-align:center;padding:36px 12px;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:18px;margin-bottom:6px}
+
+.tabs{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+.tab{flex:1;background:none;border:none;padding:10px 4px 12px;cursor:pointer;color:var(--muted);font-weight:600;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:60px;position:relative}
+.tab svg{width:24px;height:24px}
+.tab[aria-selected="true"]{color:var(--brand)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tab[aria-selected="true"]{color:var(--hi)}}
+.badge{position:absolute;top:6px;left:calc(50% + 8px);min-width:20px;height:20px;border-radius:10px;background:var(--hi);color:var(--hi-ink);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.badge[hidden]{display:none}
+.toast{position:absolute;left:16px;right:16px;bottom:84px;background:var(--ink);color:var(--surface);padding:12px 16px;border-radius:12px;font-size:15px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:20}
+.toast[hidden]{display:none}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chip-btn{background:rgba(255,255,255,.16);color:inherit;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer;min-height:38px}
+.chip-btn:hover{background:rgba(255,255,255,.26)}
+.chip-btn[hidden],.conn[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="aside">
+    <h2>Sell your scrap without the trip</h2>
+    <p>Tell us what you have and where. The office confirms a time and sends a collector to your door.</p>
+    <p>No signal? Save your request anyway. It is sent automatically when your phone is back online.</p>
+  </aside>
+
+  <main class="phone">
+    <header class="top"><div class="logo">ScrapCall<small>We collect. You get paid.</small></div><button class="chip-btn" id="installBtn" type="button" hidden>Install app</button></header>
+
+    <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Online</span></div>
+    <div class="conn" id="iosHint" hidden><span>To install: tap Share, then Add to Home Screen.</span></div>
+
+    <div class="scroll" id="scroll">
+      <section class="view" id="v-new" aria-label="New pickup request">
+        <h1>Request a pickup</h1>
+        <p class="lede">Tell us what you have and where. The office will confirm your time and assign a collector.</p>
+
+        <div class="card">
+          <div class="field">
+            <label for="name">Your name</label>
+            <input type="text" id="name" autocomplete="name">
+            <div class="err" id="e-name"></div>
+          </div>
+          <div class="field">
+            <label for="phone-in">Phone number</label>
+            <input type="tel" id="phone-in" autocomplete="tel" inputmode="tel">
+            <div class="err" id="e-phone"></div>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label for="addr">Pickup address</label>
+            <textarea id="addr" autocomplete="street-address" placeholder="House number, street, area, landmark"></textarea>
+            <button type="button" class="link-btn" id="locBtn">Use my current location</button>
+            <div class="hint" id="locNote"></div>
+            <div class="err" id="e-addr"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <span class="lbl">What are you selling? <span class="hint">Pick all that apply</span></span>
+          <div class="types" id="types"></div>
+          <div class="err" id="e-types"></div>
+          <div class="field" style="margin-top:14px">
+            <label for="qty">About how much?</label>
+            <select id="qty">
+              <option>A bag or two (under 20 kg)</option>
+              <option>A few bags (20–100 kg)</option>
+              <option>A car boot or small load (100–500 kg)</option>
+              <option>A truck load (over 500 kg)</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <span class="lbl">Photos <span class="hint">Take a picture of your scrap. Optional, but it helps the collector prepare</span></span>
+            <div class="photos" id="photos"></div>
+            <input type="file" id="file" accept="image/*" multiple hidden>
+            <input type="file" id="cam" accept="image/*" capture="environment" hidden>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row field">
+            <div><label for="date">Preferred day</label><input type="date" id="date"></div>
+            <div><label for="slot">Time</label><select id="slot"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label for="notes">Notes <span class="hint">Optional</span></label>
+            <textarea id="notes" placeholder="Gate code, floor, anything heavy"></textarea>
+          </div>
+        </div>
+
+        <button class="primary" id="submitBtn" type="button">Send request</button>
+      </section>
+
+      <section class="view" id="v-reqs" aria-label="My requests" hidden>
+        <h1>My requests</h1>
+        <p class="lede">Tap a request to see where it is.</p>
+        <div id="reqList"></div>
+      </section>
+
+      <section class="view" id="v-rates" aria-label="Price list" hidden>
+        <h1>Today’s rates</h1>
+        <p class="lede" id="ratesNote"></p>
+        <div class="card" id="rateList"></div>
+        <p class="hint">The final price is set by weighing at your door.</p>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <nav class="tabs" role="tablist" aria-label="Main">
+      <button class="tab" role="tab" data-tab="new" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New request</button>
+      <button class="tab" role="tab" data-tab="reqs" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>My requests<span class="badge" id="qBadge" hidden>0</span></button>
+      <button class="tab" role="tab" data-tab="rates" aria-selected="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9h8v8l-9 9z"/><circle cx="16" cy="8" r="1"/></svg>Rates</button>
+    </nav>
+  </main>
+</div>
+
+<script>
+(function(){
+  // Paste your Google Apps Script web app link between the quotes (it ends in /exec).
+  var CONFIG = { API_URL: "https://script.google.com/macros/s/AKfycbx91sq7JR5hO6stX0Z_5ORqoiqSLMgNFrM7kXcmpPG8XC-7T0iXiY4wgXiT5x-gTuY/exec" };
+
+  var TYPES=[
+    {name:"Iron & steel",note:"Pipes, sheets, cans",rate:0.22},
+    {name:"Copper",note:"Wire, pipes, coils",rate:6.80},
+    {name:"Aluminium",note:"Cans, frames, sheets",rate:1.45},
+    {name:"Brass",note:"Taps, fittings",rate:3.90},
+    {name:"Paper & cardboard",note:"Boxes, newspapers",rate:0.09},
+    {name:"Plastic",note:"Bottles, containers",rate:0.14},
+    {name:"Electronics",note:"Appliances, cables",rate:0.60},
+    {name:"Batteries",note:"Car and inverter",rate:0.75}
+  ];
+  var STEPS=["Received","Assigned","On the way","Completed"];
+  var K_REQ="scrapcall_requests", K_DRAFT="scrapcall_draft", K_RATES="scrapcall_rates";
+
+  var $=function(s){return document.querySelector(s)};
+  var requests=[], photos=[], openId=null, toastT, ratesAt=null, ratesFresh=false;
+
+  function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+  function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+  function isOnline(){return navigator.onLine!==false}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+  /* ---------- talking to the Google Sheet ---------- */
+  function api(payload){
+    return new Promise(function(resolve,reject){
+      var s=JSON.stringify(payload);
+      if(window.google&&google.script&&google.script.run){
+        google.script.run
+          .withSuccessHandler(function(t){try{resolve(JSON.parse(t))}catch(e){reject(e)}})
+          .withFailureHandler(reject)
+          .api(s);
+      }else if(CONFIG.API_URL){
+        fetch(CONFIG.API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:s})
+          .then(function(r){return r.json()}).then(resolve,reject);
+      }else{
+        reject(new Error("No backend configured"));
+      }
+    });
+  }
+
+  /* ---------- tabs ---------- */
+  function showTab(t){
+    ["new","reqs","rates"].forEach(function(n){$("#v-"+n).hidden=(n!==t)});
+    document.querySelectorAll(".tab").forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===t?"true":"false")});
+    $("#scroll").scrollTop=0;
+    if(t==="reqs"){renderReqs();refreshStatuses()}
+  }
+  document.querySelectorAll(".tab").forEach(function(b){b.addEventListener("click",function(){showTab(b.dataset.tab)})});
+
+  /* ---------- connection ---------- */
+  function updateConn(){
+    var on=isOnline();
+    $("#conn").classList.toggle("off",!on);
+    $("#connText").textContent=on?"Online. Requests are sent right away.":"Offline. Requests are saved on this device.";
+    $("#submitBtn").textContent=on?"Send request":"Save request, send when online";
+    $("#submitBtn").classList.toggle("queue",!on);
+    var q=requests.filter(function(r){return r.status==="queued"}).length;
+    $("#qBadge").hidden=!q; $("#qBadge").textContent=q;
+    renderRates();
+  }
+  window.addEventListener("online",function(){updateConn();syncQueue();refreshRates();refreshStatuses()});
+  window.addEventListener("offline",updateConn);
+
+  function toast(msg){
+    var t=$("#toast"); t.textContent=msg; t.hidden=false;
+    clearTimeout(toastT); toastT=setTimeout(function(){t.hidden=true},4200);
+  }
+
+  /* ---------- form ---------- */
+  function selectedTypes(){return Array.prototype.map.call(document.querySelectorAll("#types input:checked"),function(i){return i.value})}
+  function buildTypes(){
+    var keep=selectedTypes();
+    $("#types").innerHTML=TYPES.map(function(t){
+      return '<label class="type"><input type="checkbox" value="'+esc(t.name)+'"'+(keep.indexOf(t.name)>-1?" checked":"")+'><span>'+esc(t.name)+'<em>'+esc(t.note)+'</em></span></label>';
+    }).join("");
+  }
+  $("#types").addEventListener("change",function(){saveDraft()});
+  function saveDraft(){
+    save(K_DRAFT,{name:$("#name").value,phone:$("#phone-in").value,addr:$("#addr").value,types:selectedTypes(),qty:$("#qty").selectedIndex,date:$("#date").value,slot:$("#slot").selectedIndex,notes:$("#notes").value});
+  }
+  function restoreDraft(){
+    var d=load(K_DRAFT,null); if(!d)return;
+    $("#name").value=d.name||""; $("#phone-in").value=d.phone||""; $("#addr").value=d.addr||"";
+    $("#qty").selectedIndex=d.qty||0; $("#slot").selectedIndex=d.slot||0; if(d.date)$("#date").value=d.date; $("#notes").value=d.notes||"";
+    document.querySelectorAll("#types input").forEach(function(i){i.checked=(d.types||[]).indexOf(i.value)>-1});
+  }
+  ["name","phone-in","addr","qty","date","slot","notes"].forEach(function(id){
+    $("#"+id).addEventListener("input",saveDraft); $("#"+id).addEventListener("change",saveDraft);
+  });
+  (function(){var d=new Date();d.setDate(d.getDate()+1);$("#date").min=new Date().toISOString().slice(0,10);$("#date").value=d.toISOString().slice(0,10)})();
+
+  $("#locBtn").addEventListener("click",function(){
+    var n=$("#locNote");
+    if(!navigator.geolocation){n.textContent="Location isn’t available here. Type your address instead.";return}
+    n.textContent="Finding your location…";
+    navigator.geolocation.getCurrentPosition(function(p){
+      var s="GPS pin: "+p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5);
+      n.textContent="Location saved. "+s+". Add a landmark above to help the collector.";
+      n.dataset.pin=s;
+    },function(){
+      n.textContent="Couldn’t get your location. Allow location access, or type your address.";
+    },{timeout:8000});
+  });
+
+  /* photos: resized so they fit in device storage and upload quickly */
+  function renderPhotos(){
+    var h=photos.map(function(p,i){return '<div class="thumbwrap"><img class="thumb" alt="Scrap photo '+(i+1)+'" src="'+p+'"><button type="button" aria-label="Remove photo '+(i+1)+'" data-i="'+i+'">×</button></div>'}).join("");
+    if(photos.length<4)h+='<button type="button" class="add-photo" id="takePhoto">Take photo</button><button type="button" class="add-photo" id="addPhoto">From gallery</button>';
+    $("#photos").innerHTML=h;
+    var a=$("#addPhoto"); if(a)a.addEventListener("click",function(){$("#file").click()});
+    var c=$("#takePhoto"); if(c)c.addEventListener("click",function(){$("#cam").click()});
+    document.querySelectorAll(".thumbwrap button").forEach(function(b){b.addEventListener("click",function(){photos.splice(+b.dataset.i,1);renderPhotos()})});
+  }
+  function onPick(e){
+    Array.prototype.slice.call(e.target.files).slice(0,4-photos.length).forEach(function(f){
+      var r=new FileReader();
+      r.onload=function(){
+        var img=new Image();
+        img.onload=function(){
+          var s=Math.min(1,640/Math.max(img.width,img.height)),c=document.createElement("canvas");
+          c.width=img.width*s;c.height=img.height*s;c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+          photos.push(c.toDataURL("image/jpeg",.65)); renderPhotos();
+        };
+        img.src=r.result;
+      };
+      r.readAsDataURL(f);
+    });
+    e.target.value="";
+  }
+  $("#file").addEventListener("change",onPick); $("#cam").addEventListener("change",onPick);
+
+  function setErr(id,msg,inputId){
+    $("#e-"+id).textContent=msg||"";
+    if(inputId)$("#"+inputId).classList.toggle("invalid",!!msg);
+  }
+  function validate(){
+    var first=null;
+    var name=$("#name").value.trim(), ph=$("#phone-in").value.replace(/[\s-]/g,""), addr=$("#addr").value.trim(), types=selectedTypes();
+    var okPhone=/^\+?\d{7,15}$/.test(ph);
+    setErr("name",name?"":"Enter your name so the collector knows who to ask for.","name");
+    setErr("phone",okPhone?"":"Enter a phone number with 7 to 15 digits.","phone-in");
+    setErr("addr",addr.length>=8?"":"Enter the full pickup address, or use your current location.","addr");
+    setErr("types",types.length?"":"Pick at least one type of scrap.");
+    if(!name)first="name"; else if(!okPhone)first="phone-in"; else if(addr.length<8)first="addr"; else if(!types.length)first="types";
+    if(first){var el=$("#"+first);if(el.focus)el.focus();if(el.scrollIntoView)el.scrollIntoView({block:"center"})}
+    return !first;
+  }
+
+  $("#submitBtn").addEventListener("click",function(){
+    if(!validate())return;
+    var r={
+      id:"c"+Date.now().toString(36)+Math.random().toString(36).slice(2,8), code:null, status:"queued", stage:-1, created:Date.now(),
+      name:$("#name").value.trim(), phone:$("#phone-in").value.trim(),
+      addr:$("#addr").value.trim()+($("#locNote").dataset.pin?" ("+$("#locNote").dataset.pin+")":""),
+      types:selectedTypes(), qty:$("#qty").value, date:$("#date").value, slot:$("#slot").value,
+      notes:$("#notes").value.trim(), photos:photos.slice()
+    };
+    requests.unshift(r);
+    if(!save(K_REQ,requests)){
+      r.photos=[]; save(K_REQ,requests);
+      toast("Photos were too large to store offline, so the request was saved without them.");
+    }
+    ["name","phone-in","addr","notes"].forEach(function(id){$("#"+id).value=""});
+    document.querySelectorAll("#types input").forEach(function(i){i.checked=false});
+    photos=[]; renderPhotos(); $("#locNote").textContent=""; delete $("#locNote").dataset.pin;
+    try{localStorage.removeItem(K_DRAFT)}catch(e){}
+    openId=r.id; updateConn();
+    if(isOnline())syncQueue();
+    else toast("Saved on this device. We’ll send it as soon as you’re back online.");
+    showTab("reqs");
+  });
+
+  /* ---------- send queued requests to the sheet ---------- */
+  var syncing=false;
+  function syncQueue(){
+    if(syncing||!isOnline())return;
+    var q=requests.filter(function(r){return r.status==="queued"});
+    if(!q.length)return;
+    syncing=true;
+    q.forEach(function(r){r.status="sending"}); renderReqs();
+    var sent=[], failed=0, chain=Promise.resolve();
+    q.forEach(function(r){
+      chain=chain.then(function(){
+        return api({action:"submit",clientId:r.id,name:r.name,phone:r.phone,addr:r.addr,types:r.types,qty:r.qty,date:r.date,slot:r.slot,notes:r.notes,photos:r.photos||[]})
+          .then(function(res){
+            if(res&&res.ok){r.status="live";r.stage=0;r.code=res.code;r.sentAt=Date.now();r.photos=[];sent.push(r)}
+            else{r.status="queued";failed++}
+          });
+      }).catch(function(){r.status="queued";failed++});
+    });
+    chain.then(function(){
+      syncing=false; save(K_REQ,requests); updateConn(); renderReqs();
+      if(sent.length)toast(sent.length===1?"Request sent. Your tracking code is "+sent[0].code+".":sent.length+" saved requests sent.");
+      else if(failed)toast("Couldn’t reach the office yet. We’ll keep trying.");
+    });
+  }
+  setInterval(syncQueue,30000);
+
+  /* ---------- pull latest status (assigned collector, time) from the sheet ---------- */
+  function refreshStatuses(){
+    if(!isOnline())return;
+    var items=requests.filter(function(r){return r.status==="live"&&r.code&&r.stage<3&&!r.cancelled}).map(function(r){return {code:r.code,phone:r.phone}});
+    if(!items.length)return;
+    api({action:"track",items:items}).then(function(res){
+      if(!res||!res.ok)return;
+      res.items.forEach(function(it){
+        var r=requests.filter(function(x){return x.code===it.code})[0]; if(!r)return;
+        var s=STEPS.indexOf(it.status);
+        r.cancelled=(it.status==="Cancelled");
+        if(s>-1)r.stage=s;
+        r.confirmed=it.confirmed; r.collector=it.collector; r.collectorPhone=it.collectorPhone;
+      });
+      save(K_REQ,requests); renderReqs();
+    }).catch(function(){});
+  }
+  setInterval(refreshStatuses,60000);
+
+  /* ---------- requests list ---------- */
+  function fmtDate(s){try{return new Date(s+"T00:00").toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})}catch(e){return s}}
+  function pillFor(r){
+    if(r.status==="queued")return '<span class="pill queued">Waiting to send</span>';
+    if(r.status==="sending")return '<span class="pill queued">Sending…</span>';
+    if(r.cancelled)return '<span class="pill cancel">Cancelled</span>';
+    if(r.stage>=3)return '<span class="pill done">Completed</span>';
+    return '<span class="pill live">'+STEPS[r.stage]+'</span>';
+  }
+  function renderReqs(){
+    var el=$("#reqList");
+    if(!requests.length){
+      el.innerHTML='<div class="empty"><b>No requests yet</b>Your pickup requests will show up here, even when you’re offline.</div>';return;
+    }
+    el.innerHTML=requests.map(function(r){
+      var open=openId===r.id, steps="";
+      if(r.status==="live"&&!r.cancelled){
+        steps='<ol class="steps">'+STEPS.map(function(s,i){return '<li class="'+(i<r.stage||(r.stage>=3&&i<=3)?"done":i===r.stage?"now":"")+'">'+s+'</li>'}).join("")+'</ol>';
+      }else if(r.cancelled){
+        steps='<p class="detail" style="margin-top:12px">This request was cancelled. Call the office if this is a mistake.</p>';
+      }else{
+        steps='<p class="detail" style="margin-top:12px">'+(r.status==="queued"?"This request is stored on your device and hasn’t reached us yet. It will be sent automatically when you’re online.":"Sending to the office…")+'</p>';
+      }
+      var when=r.confirmed?'<p class="detail"><b>Confirmed time:</b> '+esc(r.confirmed)+'</p>':'<p class="detail"><b>Time:</b> '+esc(fmtDate(r.date))+', '+esc(r.slot.toLowerCase())+' (the office will confirm)</p>';
+      var coll=r.collector?'<p class="detail"><b>Collector:</b> '+esc(r.collector)+(r.collectorPhone?' · '+esc(r.collectorPhone):'')+'</p>':"";
+      var ph=(r.photos||[]).map(function(p){return '<img class="thumb" alt="" src="'+p+'">'}).join("");
+      return '<div class="req"><button class="req-head" data-open="'+esc(r.id)+'" aria-expanded="'+open+'">'+
+        '<div class="req-top"><span class="code">'+esc(r.code||"Pending")+'</span>'+pillFor(r)+'</div>'+
+        '<div class="req-sub">'+esc(r.types.join(", "))+'</div><div class="req-sub">'+esc(fmtDate(r.date))+', '+esc(r.slot.toLowerCase())+'</div></button>'+
+        '<div class="req-body" '+(open?"":"hidden")+'>'+steps+coll+when+
+        '<p class="detail"><b>Address:</b> '+esc(r.addr)+'</p><p class="detail"><b>Amount:</b> '+esc(r.qty)+'</p>'+
+        (r.notes?'<p class="detail"><b>Notes:</b> '+esc(r.notes)+'</p>':"")+
+        (ph?'<div class="photos" style="margin-top:8px">'+ph+'</div>':"")+'</div></div>';
+    }).join("");
+    el.querySelectorAll("[data-open]").forEach(function(b){b.addEventListener("click",function(){openId=openId===b.dataset.open?null:b.dataset.open;renderReqs()})});
+  }
+
+  /* ---------- rates from the sheet, kept on the device ---------- */
+  function refreshRates(){
+    if(!isOnline())return;
+    api({action:"rates"}).then(function(res){
+      if(!res||!res.ok||!res.rates.length)return;
+      TYPES=res.rates; ratesAt=new Date().toISOString(); ratesFresh=true;
+      save(K_RATES,{at:ratesAt,types:TYPES});
+      buildTypes(); restoreDraft(); renderRates();
+    }).catch(function(){});
+  }
+  function renderRates(){
+    var when=ratesAt?new Date(ratesAt).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+    $("#ratesNote").textContent=(isOnline()&&ratesFresh)?"Up to date. Saved on this device for offline use.":(when?"Showing rates saved on "+when+".":"Sample rates. Connect to the internet to get today’s prices.");
+    $("#rateList").innerHTML=TYPES.map(function(t){
+      return '<div class="rate"><div><b>'+esc(t.name)+'</b><small>'+esc(t.note)+'</small></div><div class="price">'+Number(t.rate).toFixed(2)+'<small> per kg</small></div></div>';
+    }).join("");
+  }
+
+  /* ---------- install as an app + offline loading ---------- */
+  var deferredPrompt=null;
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferredPrompt=e;$("#installBtn").hidden=false});
+  $("#installBtn").addEventListener("click",function(){
+    if(!deferredPrompt)return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){deferredPrompt=null;$("#installBtn").hidden=true});
+  });
+  window.addEventListener("appinstalled",function(){$("#installBtn").hidden=true;toast("ScrapCall is installed.")});
+  var isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
+  if(isIos&&!standalone)$("#iosHint").hidden=false;
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
+  }
+  if(!CONFIG.API_URL)console.warn("ScrapCall: API_URL is empty. Requests will stay queued on this device.");
+
+  /* ---------- start ---------- */
+  requests=load(K_REQ,[]);
+  requests.forEach(function(r){if(r.status==="sending")r.status="queued"});
+  var cached=load(K_RATES,null);
+  if(cached&&cached.types&&cached.types.length){TYPES=cached.types;ratesAt=cached.at}
+  buildTypes(); restoreDraft(); renderPhotos(); updateConn(); renderReqs();
+  syncQueue(); refreshRates(); refreshStatuses();
+})();
+</script>
+</body>
+</html>
