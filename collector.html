@@ -56,6 +56,9 @@ body{background:var(--surface2)}
 .radio input:checked + span{color:var(--brand)}
 .radio label:has(input:checked){border-color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,var(--surface))}
 .radio label:has(input:focus-visible){outline:3px solid var(--hi);outline-offset:2px}
+.routecard{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px solid var(--brand);border-radius:14px;padding:14px;margin-bottom:12px}
+.routecard>div{flex:1;min-width:200px}
+.routecard .primary{min-height:46px;flex:none}
 </style>
 </head>
 <body>
@@ -107,6 +110,7 @@ body{background:var(--surface2)}
 
 <script src="leaflet.js"></script>
 <script src="map.js"></script>
+<script src="route.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
@@ -156,7 +160,7 @@ body{background:var(--surface2)}
   }
   $("#signOut").addEventListener("click",function(){
     if(queue.length&&!confirm("You have "+queue.length+" saved update(s) that haven’t been sent. Sign out anyway? They will be lost.")) return;
-    queue=[]; SC.save(QK,queue); S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; SC.save(DK,S); signedOut("");
+    queue=[]; SC.save(QK,queue); S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; SC.save(DK,S); manualPos=null; signedOut("");
   });
 
   /* ---------- loading jobs ---------- */
@@ -218,36 +222,82 @@ body{background:var(--surface2)}
       return (a.confirmedInput||a.day||"z").localeCompare(b.confirmedInput||b.day||"z");
     });
   }
-  function jobCard(j){
+  /* ---------- route plan: the best order for your stops ---------- */
+  // The start point is only known after the collector taps "Show my location"; it stays on this phone.
+  var plan=null, planAt=0, manualPos=null;
+  function startPoint(){
+    var p=manualPos;
+    return p?[Math.round(p.lat*1000)/1000,Math.round(p.lng*1000)/1000]:null;   // ~100 m, so the same road table is reused
+  }
+  function jobsKey(jobs){ return jobs.map(function(j){ return j.code+"|"+j.status+"|"+(j.confirmedInput||"")+"|"+j.lat+","+j.lng; }).join(";"); }
+  function refreshPlan(force){
+    if(!window.SCRoute||!window.SCMap) return;
+    var jobs=openJobs().filter(validPin), key=jobsKey(jobs);
+    if(!force&&plan&&plan.jobsKey===key&&Date.now()-planAt<120000) return;
+    planAt=Date.now();
+    var st=startPoint();
+    var stops=jobs.map(function(j){ return {id:j.code,lat:j.lat,lng:j.lng,time:j.confirmedInput||""}; });
+    function done(fn){
+      var p=SCRoute.plan(st,stops,fn); p.jobsKey=key; p.live=!!(fn&&fn.live); p.start=st; plan=p; planAt=Date.now(); render();
+    }
+    if(!stops.length){ plan={order:[],legs:[],km:0,min:0,jobsKey:key,live:false,start:st}; render(); return; }
+    var pts=(st?[st]:[]).concat(stops.map(function(x){ return [x.lat,x.lng]; }));
+    if(navigator.onLine===false||pts.length<2) done(SCRoute.estimate);
+    else SCRoute.matrix(pts).then(done);
+  }
+  function orderedJobs(){
+    var jobs=openJobs();
+    if(!plan||plan.jobsKey!==jobsKey(jobs.filter(validPin))) return jobs;
+    var by={}; jobs.forEach(function(j){ by[j.code]=j; });
+    var out=plan.order.map(function(x){ return by[x.id]; }).filter(Boolean);
+    jobs.forEach(function(j){ if(out.indexOf(j)<0) out.push(j); });
+    return out;
+  }
+  function legLine(j,n){
+    if(!n||!plan||!window.SCRoute) return "";
+    var l=plan.legs.filter(function(x){ return x.id===j.code; })[0];
+    if(!l||l.first) return "";
+    return '<div class="j-sub"><b>'+esc(SCRoute.fmt(l.km,l.min,l.road))+'</b> '+(n===1&&plan.start?"from where you are":"from the previous stop")+'</div>';
+  }
+  function routeCard(){
+    if(!plan||!plan.order.length||!window.SCRoute) return "";
+    var stops=plan.order.map(function(x){ return {lat:x.lat,lng:x.lng}; });
+    return '<div class="routecard"><div><b>Your route: '+plan.order.length+' stop'+(plan.order.length===1?"":"s")+' · '+esc(SCRoute.fmt(plan.km,plan.min,plan.live))+'</b>'+
+      '<div class="hint">Stops are in the order that saves driving. Pickups with an agreed time stay in time order. '+(plan.live?"Road distances, no live traffic.":"Estimated until you are online.")+
+      (plan.start?"":" Tap “Show my location” on the Map tab to plan from where you are.")+'</div></div>'+
+      '<a class="primary" href="'+esc(SCRoute.navLink(stops))+'" target="_blank" rel="noopener">Navigate all stops</a></div>';
+  }
+  function jobCard(j,n){
     var when=j.confirmed?("At "+j.confirmed):("Wants "+SC.day(j.day)+", "+(j.slot||"").toLowerCase());
     var tag=j.pending?'<span class="pill warn">Waiting to send</span>':(j.status==="On the way"?'<span class="pill live">On the way</span>':j.status==="Completed"?'<span class="pill ok">Completed</span>':'<span class="pill warn">To do</span>');
-    return '<button class="job" data-code="'+esc(j.code)+'"><div class="j-top"><span class="code">'+esc(j.code)+'</span>'+tag+'</div>'+
+    return '<button class="job" data-code="'+esc(j.code)+'"><div class="j-top"><span class="code">'+(n?n+". ":"")+esc(j.code)+'</span>'+(n===1?'<span class="pill live">Next stop</span> ':"")+tag+'</div>'+
       '<div class="j-name">'+esc(j.name)+'</div><div class="j-sub">'+esc(j.addr.slice(0,90))+'</div>'+
-      '<div class="j-sub">'+esc(when)+'</div><div class="j-sub">'+esc(j.types)+' — '+esc(j.qty)+'</div>'+
+      '<div class="j-sub">'+esc(when)+'</div><div class="j-sub">'+esc(j.types)+' — '+esc(j.qty)+'</div>'+legLine(j,n)+
       (j.status==="Completed"?'<div class="j-sub"><b>'+SC.kg(j.kg)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')</div>':
        (j.phoneOk?"":'<div class="j-tags"><span class="pill warn">Office hasn’t confirmed this phone yet</span></div>'))+'</button>';
   }
   function render(){
     var q=$("#qInfo"); q.hidden=!queue.length; q.textContent=queue.length+" waiting to send";
-    var jobs=openJobs();
-    $("#v-jobs").innerHTML=jobs.length?jobs.map(jobCard).join(""):'<div class="empty"><b>No jobs right now</b>When the office gives you a pickup, it shows up here.</div>';
+    var jobs=orderedJobs();
+    $("#v-jobs").innerHTML=jobs.length?routeCard()+jobs.map(function(j,i){ return jobCard(j,validPin(j)&&plan&&plan.order.length?i+1:0); }).join(""):'<div class="empty"><b>No jobs right now</b>When the office gives you a pickup, it shows up here.</div>';
     var done=S.jobs.filter(function(j){return j.status==="Completed";});
     var kg=done.reduce(function(s,j){return s+j.kg;},0), paid=done.reduce(function(s,j){return s+j.paid;},0);
     var bal=SC.num((S.cash.balance||0)-pendingCash());
     $("#v-today").innerHTML=
       '<div class="cashcard"><div class="n">'+SC.money(bal)+'</div><div class="l">Cash you should be holding (cash from the office, minus cash paid to customers)</div></div>'+
       '<div class="stats"><div class="stat"><div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat"><div class="n">'+SC.num(kg)+'</div><div class="l">kg collected</div></div><div class="stat"><div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
-      (done.length?'<h2>Done today</h2>'+done.map(jobCard).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>');
+      (done.length?'<h2>Done today</h2>'+done.map(function(j){ return jobCard(j); }).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>');
     $$("#app .job").forEach(function(b){ b.addEventListener("click",function(){ openJob(b.dataset.code); }); });
     if(tab==="map") renderMap(false);
+    refreshPlan(false);
   }
 
   /* ---------- map of today's stops ---------- */
   var cmap=null, clayer=null, mePin=null, jmap=null;
   function renderMap(refit){
-    var box=$("#jobMap"), jobs=openJobs();
+    var box=$("#jobMap"), jobs=orderedJobs();
     var nopin=jobs.filter(function(j){ return !validPin(j); }).length;
-    $("#mapNote").textContent=!jobs.length?"No open jobs to show.":(nopin?nopin+" job"+(nopin===1?" has":"s have")+" no pin. Open the job to get directions from the address.":"Numbers show the order of your jobs. Tap a pin for directions.");
+    $("#mapNote").textContent=!jobs.length?"No open jobs to show.":"Numbers show the best order for your stops. The blue line is the road route. Tap a pin for directions."+(nopin?" "+nopin+" job"+(nopin===1?" has":"s have")+" no pin: open the job to get directions from the address.":"");
     $("#meBtn").hidden=!mapOk();
     if(!mapOk()){
       if(cmap){ try{cmap.remove();}catch(e){} cmap=null; mePin=null; }
@@ -266,10 +316,22 @@ body{background:var(--surface2)}
     });
     if(mePin) mePin.addTo(cmap);
     if(refit&&pts.length) cmap.fitBounds(pts,{padding:[40,40],maxZoom:16});
+    drawRoute();
+  }
+  var rtoken=0;
+  function drawRoute(){
+    if(!window.SCRoute||!plan||!plan.order.length||!cmap) return;
+    var tk=++rtoken, pts=(plan.start?[plan.start]:[]).concat(plan.order.map(function(x){ return [x.lat,x.lng]; }));
+    SCRoute.route(pts).then(function(res){
+      if(tk!==rtoken||!cmap) return;
+      L.polyline(res.coords,{color:"#1d6fd6",weight:5,opacity:.75,dashArray:res.road?null:"6 8"})
+        .bindTooltip(SCRoute.fmt(res.km,res.min,res.road)).addTo(clayer);
+    });
   }
   $("#meBtn").addEventListener("click",function(){
     if(!cmap||!window.SCMap) return;
     SCMap.locate().then(function(p){
+      manualPos={lat:p.lat,lng:p.lng}; refreshPlan(true);
       if(mePin) mePin.setLatLng([p.lat,p.lng]); else mePin=L.marker([p.lat,p.lng],{icon:SCMap.pinIcon("","p-me")});
       mePin.addTo(cmap);
       var pts=openJobs().filter(validPin).map(function(j){ return [j.lat,j.lng]; }); pts.push([p.lat,p.lng]);
