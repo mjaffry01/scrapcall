@@ -62,7 +62,7 @@ h1{font-family:var(--head);font-size:30px;line-height:1.05;margin:4px 0 6px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
 label,.lbl{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
 .hint{font-weight:400;color:var(--muted);font-size:13px}
-input[type=text],input[type=tel],input[type=date],select,textarea{width:100%;background:var(--surface2);border:1.5px solid var(--line);border-radius:10px;padding:12px;min-height:46px}
+input[type=text],input[type=tel],input[type=email],input[type=date],select,textarea{width:100%;background:var(--surface2);border:1.5px solid var(--line);border-radius:10px;padding:12px;min-height:46px}
 textarea{min-height:76px;resize:vertical}
 input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .field{margin-bottom:14px}
@@ -166,6 +166,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
             <label for="phone-in">Phone number <span class="hint">The office will call or message this number to confirm</span></label>
             <input type="tel" id="phone-in" autocomplete="tel" inputmode="tel">
             <div class="err" id="e-phone"></div>
+          </div>
+          <div class="field">
+            <label for="alt-phone">Alternate phone <span class="hint">Optional. A second number we can try</span></label>
+            <input type="tel" id="alt-phone" autocomplete="tel" inputmode="tel">
+            <div class="err" id="e-alt"></div>
+          </div>
+          <div class="field">
+            <label for="email">Email <span class="hint">Optional. For updates and receipts</span></label>
+            <input type="email" id="email" autocomplete="email" inputmode="email">
+            <div class="err" id="e-email"></div>
           </div>
           <div class="field" style="margin-bottom:0">
             <label for="addr">Pickup address</label>
@@ -320,15 +330,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   }
   $("#types").addEventListener("change",function(){saveDraft()});
   function saveDraft(){
-    save(K_DRAFT,{name:$("#name").value,phone:$("#phone-in").value,addr:$("#addr").value,types:selectedTypes(),qty:$("#qty").selectedIndex,date:$("#date").value,slot:$("#slot").selectedIndex,notes:$("#notes").value});
+    save(K_DRAFT,{name:$("#name").value,phone:$("#phone-in").value,alt:$("#alt-phone").value,email:$("#email").value,addr:$("#addr").value,types:selectedTypes(),qty:$("#qty").selectedIndex,date:$("#date").value,slot:$("#slot").selectedIndex,notes:$("#notes").value});
   }
   function restoreDraft(){
     var d=load(K_DRAFT,null); if(!d)return;
-    $("#name").value=d.name||""; $("#phone-in").value=d.phone||""; $("#addr").value=d.addr||"";
+    $("#name").value=d.name||""; $("#phone-in").value=d.phone||""; $("#alt-phone").value=d.alt||""; $("#email").value=d.email||""; $("#addr").value=d.addr||"";
     $("#qty").selectedIndex=d.qty||0; $("#slot").selectedIndex=d.slot||0; if(d.date)$("#date").value=d.date; $("#notes").value=d.notes||"";
     document.querySelectorAll("#types input").forEach(function(i){i.checked=(d.types||[]).indexOf(i.value)>-1});
   }
-  ["name","phone-in","addr","qty","date","slot","notes"].forEach(function(id){
+  ["name","phone-in","alt-phone","email","addr","qty","date","slot","notes"].forEach(function(id){
     $("#"+id).addEventListener("input",saveDraft); $("#"+id).addEventListener("change",saveDraft);
   });
   (function(){var d=new Date();d.setDate(d.getDate()+1);$("#date").min=new Date().toISOString().slice(0,10);$("#date").value=d.toISOString().slice(0,10)})();
@@ -381,11 +391,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     var first=null;
     var name=$("#name").value.trim(), ph=$("#phone-in").value.replace(/[\s-]/g,""), addr=$("#addr").value.trim(), types=selectedTypes();
     var okPhone=/^\+?\d{7,15}$/.test(ph);
+    var alt=$("#alt-phone").value.replace(/[\s-]/g,""), em=$("#email").value.trim();
+    var okAlt=!alt||/^\+?\d{7,15}$/.test(alt), okEm=!em||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+    setErr("alt",okAlt?"":"Enter a phone number with 7 to 15 digits, or leave this blank.","alt-phone");
+    setErr("email",okEm?"":"Enter an email like name@example.com, or leave this blank.","email");
     setErr("name",name?"":"Enter your name so the collector knows who to ask for.","name");
     setErr("phone",okPhone?"":"Enter a phone number with 7 to 15 digits.","phone-in");
     setErr("addr",addr.length>=8?"":"Enter the full pickup address, or use your current location.","addr");
     setErr("types",types.length?"":"Pick at least one type of scrap.");
-    if(!name)first="name"; else if(!okPhone)first="phone-in"; else if(addr.length<8)first="addr"; else if(!types.length)first="types";
+    if(!name)first="name"; else if(!okPhone)first="phone-in"; else if(!okAlt)first="alt-phone"; else if(!okEm)first="email"; else if(addr.length<8)first="addr"; else if(!types.length)first="types";
     if(first){var el=$("#"+first);if(el.focus)el.focus();if(el.scrollIntoView)el.scrollIntoView({block:"center"})}
     return !first;
   }
@@ -394,7 +408,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     if(!validate())return;
     var r={
       id:"c"+Date.now().toString(36)+Math.random().toString(36).slice(2,8), code:null, status:"queued", stage:-1, created:Date.now(),
-      name:$("#name").value.trim(), phone:$("#phone-in").value.trim(),
+      name:$("#name").value.trim(), phone:$("#phone-in").value.trim(), alt:$("#alt-phone").value.trim(), email:$("#email").value.trim(),
       addr:$("#addr").value.trim()+($("#locNote").dataset.pin?" ("+$("#locNote").dataset.pin+")":""),
       types:selectedTypes(), qty:$("#qty").value, date:$("#date").value, slot:$("#slot").value,
       notes:$("#notes").value.trim(), photos:photos.slice()
@@ -404,7 +418,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
       r.photos=[]; save(K_REQ,requests);
       toast("Photos were too large to store offline, so the request was saved without them.");
     }
-    ["name","phone-in","addr","notes"].forEach(function(id){$("#"+id).value=""});
+    ["name","phone-in","alt-phone","email","addr","notes"].forEach(function(id){$("#"+id).value=""});
     document.querySelectorAll("#types input").forEach(function(i){i.checked=false});
     photos=[]; renderPhotos(); $("#locNote").textContent=""; delete $("#locNote").dataset.pin;
     try{localStorage.removeItem(K_DRAFT)}catch(e){}
@@ -425,7 +439,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     var sent=[], failed=0, chain=Promise.resolve();
     q.forEach(function(r){
       chain=chain.then(function(){
-        return api({action:"submit",clientId:r.id,name:r.name,phone:r.phone,addr:r.addr,types:r.types,qty:r.qty,date:r.date,slot:r.slot,notes:r.notes,photos:r.photos||[]})
+        return api({action:"submit",clientId:r.id,name:r.name,phone:r.phone,alt:r.alt||"",email:r.email||"",addr:r.addr,types:r.types,qty:r.qty,date:r.date,slot:r.slot,notes:r.notes,photos:r.photos||[]})
           .then(function(res){
             if(res&&res.ok){r.status="live";r.stage=0;r.code=res.code;r.sentAt=Date.now();r.photos=[];sent.push(r)}
             else{r.status="queued";failed++}
@@ -490,7 +504,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
         '<div class="req-top"><span class="code">'+esc(r.code||"Pending")+'</span>'+pillFor(r)+'</div>'+
         '<div class="req-sub">'+esc(r.types.join(", "))+'</div><div class="req-sub">'+esc(fmtDate(r.date))+', '+esc(r.slot.toLowerCase())+'</div></button>'+
         '<div class="req-body" '+(open?"":"hidden")+'>'+steps+coll+when+pc+
-        '<p class="detail"><b>Address:</b> '+esc(r.addr)+'</p><p class="detail"><b>Amount:</b> '+esc(r.qty)+'</p>'+
+        (r.alt?'<p class="detail"><b>Alternate phone:</b> '+esc(r.alt)+'</p>':"")+(r.email?'<p class="detail"><b>Email:</b> '+esc(r.email)+'</p>':"")+'<p class="detail"><b>Address:</b> '+esc(r.addr)+'</p><p class="detail"><b>Amount:</b> '+esc(r.qty)+'</p>'+
         (r.notes?'<p class="detail"><b>Notes:</b> '+esc(r.notes)+'</p>':"")+
         (ph?'<div class="photos" style="margin-top:8px">'+ph+'</div>':"")+'</div></div>';
     }).join("");
