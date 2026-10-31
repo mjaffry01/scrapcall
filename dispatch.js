@@ -172,7 +172,8 @@
     var virt = {}, items = [], byCode = {};
     waiting.forEach(function (r) {
       var ranked = rank(r, state, virt), best = ranked[0] || null;
-      var item = { req: r, best: best, alts: ranked.slice(0, 3), excluded: ranked.excluded, noPin: !hasPin(r), reason: null, when: windowOf(r).label };
+      // all: every collector who can take it, best first (for "Someone else…" and reassigning)
+      var item = { req: r, best: best, alts: ranked.slice(0, 3), all: ranked.slice(), excluded: ranked.excluded, noPin: !hasPin(r), reason: null, when: windowOf(r).label };
       if (best) {
         item.reason = reason(best);
         var day = dayOf(r, state.today), v = (virt[best.c.id] = virt[best.c.id] || {});

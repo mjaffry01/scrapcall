@@ -67,6 +67,12 @@
 .sugbtns{display:flex;gap:8px}
 .sugbtns>*{min-height:42px;font-size:15px}
 .sugnote{font-size:13px;color:var(--muted);margin:8px 0 0}
+.sugbtns select{width:auto;max-width:190px;min-height:42px;font-size:15px}
+.warnline{font-size:14px;font-weight:600;margin:6px 0 0;min-height:0}
+.alertcard{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:color-mix(in srgb,var(--bad) 10%,var(--surface));border:1.5px solid var(--bad);border-radius:14px;padding:14px;margin-bottom:12px}
+.alertcard>div:first-child{flex:1;min-width:220px}
+.reassign-row{border-bottom:1px solid var(--line);padding:10px 0}
+.reassign-row select{margin-top:8px}
 </style>
 </head>
 <body>
@@ -106,6 +112,7 @@
     <section class="view" id="v-overview" aria-label="Overview">
       <h1>Today</h1>
       <p class="lede" id="ovDate"></p>
+      <div id="ovAlerts"></div>
       <div class="stats" id="ovStats"></div>
       <div class="card">
         <h2>Waiting for a collector</h2>
@@ -261,8 +268,6 @@
     })};
   }
   function sug(){ return window.SCDispatch?SCDispatch.suggest(dstate()):{items:[],byCode:{}}; }
-  // the collector app doesn't share locations yet; until someone does, hide the on-duty parts
-  function tracking(){ return S.collectors.some(function(c){ return !!c.loc; }); }
   function ago(sec){
     if(sec==null) return "never";
     var m=Math.round(sec/60); if(m<1) return "just now"; if(m<60) return m+" min ago";
@@ -276,6 +281,18 @@
     return {cls:"",text:"Off duty · last seen "+ago(d.locAge)};
   }
   function onDutyCount(){ var d=dstate().collectors; return d.filter(function(c){return window.SCDispatch&&SCDispatch.isFresh(c);}).length; }
+  // location sharing is off in the collector app: hide on-duty counts and location badges until someone shares a location
+  function tracking(){ return S.collectors.some(function(c){ return !!c.loc; }); }
+  // "Someone else…": the director can always pick a different collector than the one suggested
+  function otherSelect(it){
+    var opts=(it.all||[]).filter(function(x){ return !it.best||x.c.id!==it.best.c.id; }).map(function(x){
+      return '<option value="'+esc(x.c.id)+'">'+esc(x.c.name)+' · '+x.jobs+' open</option>';
+    }).concat((it.excluded||[]).map(function(e){
+      return '<option value="'+esc(e.c.id)+'">'+esc(e.c.name)+' · not available then</option>';
+    }));
+    if(!opts.length) return "";
+    return '<select data-other="'+esc(it.req.code)+'" aria-label="Assign '+esc(it.req.name)+' to someone else"><option value="">Someone else…</option>'+opts.join("")+'</select>';
+  }
   function sugRows(items,limit){
     return items.slice(0,limit).map(function(it){
       var r=it.req,b=it.best;
@@ -283,14 +300,14 @@
         '<div class="rc-sub">'+esc(r.addr.slice(0,70))+' · '+esc(SC.day(r.confirmedInput?r.confirmedInput.slice(0,10):r.day))+', '+esc(it.when)+'</div>'+
         '<div class="rc-sub">'+(b?'Send <b>'+esc(b.c.name)+'</b> — '+esc(it.reason):esc(it.reason))+'</div></div>'+
         '<div class="sugbtns">'+(b?'<button class="primary" data-assign="'+esc(r.code)+'" data-coll="'+esc(b.c.id)+'">Assign '+esc(b.c.name.split(" ")[0])+'</button>':"")+
+        otherSelect(it)+
         '<button class="secondary" data-open="'+esc(r.code)+'">Open</button></div></div>';
     }).join("");
   }
   function sugBlock(sg,limit){
     var n=sg.items.filter(function(i){return i.best;}).length;
     return (n>1?'<div class="bar"><button class="secondary" data-assignall="1">Assign all '+n+' suggestions</button></div>':"")+sugRows(sg.items,limit)+
-      '<p class="sugnote">'+(S.dist&&S.dist.live?"Distances and times are by road, using OpenStreetMap routing. They don’t include live traffic.":"Distances are straight-line estimates because road routing isn’t available right now. Roads are usually 30–40% longer.")+
-      (tracking()?' Suggestions start from where each collector is now (or from their other pickups that day) and spread the work.':' Suggestions use each collector’s working hours and measure from their other pickups that day, and spread the work.')+'</p>';
+      '<p class="sugnote">'+(S.dist&&S.dist.live?"Distances and times are by road, using OpenStreetMap routing. They don’t include live traffic.":"Distances are straight-line estimates because road routing isn’t available right now. Roads are usually 30–40% longer.")+(tracking()?' Suggestions start from where each collector is now (or from their other pickups that day) and spread the work.':' Suggestions use each collector’s working hours and measure from their other pickups that day, and spread the work.')+'</p>';
   }
   var roadKey="";
   function updateRoads(){
@@ -315,6 +332,15 @@
       b.disabled=true;
       assignOne(b.dataset.assign,b.dataset.coll).then(function(){ SC.toast("Assigned. Open the request to confirm the pickup time."); refresh(true); })
         .catch(function(e){ b.disabled=false; if(e.message!=="auth") SC.toast(e.message||"Couldn’t assign. Check your connection."); });
+    }); });
+    $$("[data-other]",root).forEach(function(sel){ sel.addEventListener("change",function(){
+      var cid=sel.value; if(!cid) return;
+      var it=sg.byCode[sel.dataset.other], c=S.collectors.filter(function(x){return x.id===cid;})[0];
+      var ex=it&&it.excluded.filter(function(e){return e.c.id===cid;})[0];
+      if(ex&&!confirm(c.name+" is not available then ("+ex.why+"). Assign anyway?")){ sel.value=""; return; }
+      sel.disabled=true;
+      assignOne(sel.dataset.other,cid).then(function(){ SC.toast("Assigned to "+c.name+". Open the request to confirm the pickup time."); refresh(true); })
+        .catch(function(e){ sel.disabled=false; sel.value=""; if(e.message!=="auth") SC.toast(e.message||"Couldn’t assign. Check your connection."); });
     }); });
     var all=$("[data-assignall]",root);
     if(all) all.addEventListener("click",function(){
@@ -343,6 +369,14 @@
   function renderOverview(){
     var o=stats();
     $("#ovDate").textContent=S.today?SC.day(S.today):"";
+    $("#ovAlerts").innerHTML=S.collectors.filter(function(c){ return c.unavailable; }).map(function(c){
+      return '<div class="alertcard"><div><b>'+esc(c.name)+' is unavailable</b> — '+esc(c.unavailable.reason)+
+        (c.unavailable.since?' <span class="muted">since '+esc(SC.when(c.unavailable.since))+'</span>':"")+
+        '<div class="rc-sub">'+(c.openJobs?c.openJobs+' open pickup'+(c.openJobs===1?"":"s")+' still with them':'No open pickups')+'. They are not being suggested for new pickups.</div></div>'+
+        '<div class="sugbtns">'+(c.openJobs?'<button class="primary" data-reassign="'+esc(c.id)+'">Reassign '+c.openJobs+' pickup'+(c.openJobs===1?"":"s")+'</button>':"")+
+        '<button class="secondary" data-avail="'+esc(c.id)+'">Back available</button></div></div>';
+    }).join("");
+    bindCollActions($("#ovAlerts"));
     $("#ovStats").innerHTML=
       statCard(o.fresh,"New requests to assign","new",true)+
       statCard(o.phone,"Phone numbers to confirm","phone",true)+
@@ -357,10 +391,9 @@
     var sg=sug();
     $("#ovWaiting").innerHTML=sg.items.length?sugBlock(sg,6):'<div class="empty"><b>Nothing waiting</b>New customer requests will show up here with a suggested collector.</div>';
     bindSug($("#ovWaiting"),sg);
-    var tr=tracking();
     $("#ovColl").innerHTML=S.collectors.length?
       '<table class="tbl"><thead><tr><th>Collector</th><th class="num">Open jobs</th><th class="num">Done today</th><th class="num">kg</th><th class="num">Paid</th><th class="num">Cash held</th></tr></thead><tbody>'+
-      S.collectors.map(function(c){ return '<tr><td>'+esc(c.name)+(c.active?"":' <span class="pill">off</span>')+(tr?' <span class="pill '+collStatus(c).cls+'">'+esc(collStatus(c).text)+'</span>':"")+'</td><td class="num">'+c.openJobs+'</td><td class="num">'+c.doneToday+'</td><td class="num">'+SC.num(c.kgToday)+'</td><td class="num">'+SC.money(c.paidToday)+'</td><td class="num">'+SC.money(c.cash.balance)+'</td></tr>'; }).join("")+'</tbody></table>'
+      S.collectors.map(function(c){ return '<tr><td>'+esc(c.name)+(c.active?"":' <span class="pill">off</span>')+(tracking()?' <span class="pill '+collStatus(c).cls+'">'+esc(collStatus(c).text)+'</span>':"")+(c.unavailable?' <span class="pill bad">Unavailable</span>':"")+'</td><td class="num">'+c.openJobs+'</td><td class="num">'+c.doneToday+'</td><td class="num">'+SC.num(c.kgToday)+'</td><td class="num">'+SC.money(c.paidToday)+'</td><td class="num">'+SC.money(c.cash.balance)+'</td></tr>'; }).join("")+'</tbody></table>'
       :'<div class="empty"><b>No collectors yet</b>Add your first collector in the Collectors tab.</div>';
   }
 
@@ -403,6 +436,30 @@
   $("#search").addEventListener("input",function(){ query=this.value.trim().toLowerCase(); renderRequests(); });
 
   /* ---------- one request: assign, confirm, update ---------- */
+  // who could take this request at its time and place (works for new and already-assigned requests)
+  function availability(r){
+    var info={};
+    if(!window.SCDispatch) return info;
+    var st=dstate(); st.requests=st.requests.filter(function(x){ return x.code!==r.code; });
+    var probe={}; for(var k in r) probe[k]=r[k]; probe.status="Received"; probe.collectorId="";
+    var rk=SCDispatch.rank(probe,st,{});
+    rk.forEach(function(x,i){ info[x.c.id]={ok:true,order:i,best:i===0,x:x}; });
+    rk.excluded.forEach(function(e){ info[e.c.id]={ok:false,order:100,why:e.why}; });
+    return info;
+  }
+  function collOptions(r,info){
+    var list=S.collectors.filter(function(c){ return c.active||c.id===r.collectorId; });
+    var ord=function(c){ var i=info[c.id]; return i?i.order:(c.active?150:200); };
+    list.sort(function(a,b){ return ord(a)-ord(b)||(a.name<b.name?-1:1); });
+    return list.map(function(c){
+      var i=info[c.id], label;
+      if(!c.active) label=c.name+" (off)";
+      else if(i&&i.ok) label=(i.best?"★ ":"")+c.name+" · "+c.openJobs+" open"+(i.x.dist!=null?" · "+(Math.round(i.x.dist*10)/10)+" km"+(i.x.road?" by road":""):"");
+      else if(i) label=c.name+" · not available then";
+      else label=c.name+" · "+c.openJobs+" open";
+      return '<option value="'+esc(c.id)+'"'+(c.id===r.collectorId?" selected":"")+'>'+esc(label)+'</option>';
+    }).join("");
+  }
   function suggestHtml(r){
     if(r.status!=="Received"||r.collectorId) return "";
     var it=sug().byCode[r.code]; if(!it) return "";
@@ -414,12 +471,12 @@
   }
   function openRequest(code){
     var r=S.requests.filter(function(x){return x.code===code;})[0]; if(!r) return;
-    var collOpts='<option value="">Not assigned</option>'+S.collectors.filter(function(c){return c.active||c.id===r.collectorId;}).map(function(c){
-      return '<option value="'+esc(c.id)+'"'+(c.id===r.collectorId?" selected":"")+'>'+esc(c.name)+(c.active?"":" (off)")+' · '+c.openJobs+' open</option>';
-    }).join("");
+    var info=availability(r);
+    var collOpts='<option value="">Not assigned</option>'+collOptions(r,info);
     var statusOpts=STATUSES.map(function(s){ return '<option'+(s===r.status?" selected":"")+'>'+s+'</option>'; }).join("");
     var wa=SC.waHref(r.phone);
     var photos=r.photos.map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
+    var dphotos=(r.donePhotos||[]).map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
     var done=r.status==="Completed"&&r.kg>0?'<div class="sec">Collected</div><p class="detail"><b>'+SC.kg(r.kg)+'</b> · paid <b>'+SC.money(r.paid)+'</b> ('+esc(r.method)+')</p><p class="detail" style="white-space:pre-line">'+esc(r.details)+'</p>':"";
     var body=
       '<p class="detail"><b>'+esc(r.name)+'</b> · received '+esc(SC.when(r.at))+'</p>'+
@@ -431,6 +488,7 @@
       '<p class="detail"><b>Customer wants:</b> '+esc(SC.day(r.day))+', '+esc(r.slot.toLowerCase())+'</p>'+
       (r.notes?'<p class="detail"><b>Customer notes:</b> '+esc(r.notes)+'</p>':"")+
       (photos?'<div class="photos detail">'+photos+'</div>':"")+
+      (dphotos?'<div class="sec">Collector’s photos</div><div class="photos detail">'+dphotos+'</div>':"")+
       done+
       '<div class="sec">Map pin</div>'+
       '<div class="mapbar" id="rMapBar"><input type="search" id="rMapQ" aria-label="Search the map" placeholder="Search address or place" value="'+esc(r.addr.slice(0,120))+'"><button type="button" class="map-btn" id="rMapFind">Find</button></div>'+
@@ -439,8 +497,9 @@
       '<div class="sec">Office</div>'+
       '<label class="check"><input type="checkbox" id="rPhone"'+(r.phoneOk?" checked":"")+'> Phone number confirmed</label>'+
       suggestHtml(r)+
-      '<div class="row field"><div><label for="rColl">Collector</label><select id="rColl">'+collOpts+'</select></div>'+
+      '<div class="row field"><div><label for="rColl">Collector</label><select id="rColl">'+collOpts+'</select><div class="warnline" id="rWarn" role="status"></div></div>'+
       '<div><label for="rStatus">Status</label><select id="rStatus">'+statusOpts+'</select></div></div>'+
+      '<div class="field" id="rReasonBox" hidden><label for="rReason">Reason for the change <span class="hint">Optional, saved in the office notes</span></label><input type="text" id="rReason" placeholder="e.g. vehicle broke down"></div>'+
       '<div class="field"><label for="rTime">Confirmed pickup time</label><input type="datetime-local" id="rTime" value="'+esc(r.confirmedInput)+'">'+
       (r.confirmed&&!r.confirmedInput?'<div class="hint">Currently written in the Sheet as: '+esc(r.confirmed)+'</div>':'<div class="hint">The customer sees this time in their app.</div>')+'</div>'+
       '<div class="field"><label for="rOffice">Office notes</label><textarea id="rOffice">'+esc(r.office)+'</textarea></div>'+
@@ -471,6 +530,16 @@
     $$("#dlg [data-pick]").forEach(function(b){ b.addEventListener("click",function(){
       var sel=$("#rColl"); sel.value=b.dataset.pick; sel.dispatchEvent(new Event("change"));
     }); });
+    function collWarn(){
+      var id=$("#rColl").value, i=info[id], c=S.collectors.filter(function(x){return x.id===id;})[0], w=$("#rWarn");
+      $("#rReasonBox").hidden=!(r.collectorId&&id!==r.collectorId);
+      if(!id||!c||id===r.collectorId){ w.textContent=""; return; }
+      if(i&&!i.ok){ w.style.color="var(--bad)"; w.textContent=c.name+" is not available then: "+i.why+". You can still assign them."; }
+      else if(i&&i.best){ w.style.color="var(--ok)"; w.textContent="The system’s first choice."; }
+      else if(i){ w.style.color="var(--muted)"; w.textContent="Available. You are choosing someone other than the first suggestion."; }
+      else w.textContent="";
+    }
+    $("#rColl").addEventListener("change",collWarn);
     $("#rColl").addEventListener("change",function(){
       var st=$("#rStatus");
       if(this.value&&st.value==="Received") st.value="Assigned";
@@ -483,8 +552,13 @@
       var t=$("#rTime").value; if(t!==r.confirmedInput) d.confirmedInput=t;
       var p=$("#rPhone").checked; if(p!==r.phoneOk) d.phoneOk=p;
       var o=$("#rOffice").value; if(o!==r.office) d.office=o;
+      if(d.collectorId!==undefined&&r.collectorId&&$("#rReason").value.trim()) d.reason=$("#rReason").value.trim();
       if(pinChanged){ if(window.SCMap&&SCMap.valid(pinLat,pinLng)){ d.lat=pinLat; d.lng=pinLng; } else { d.lat=""; d.lng=""; } }
       if(Object.keys(d).length===1){ SC.closeDialog(); return; }
+      if(d.collectorId&&info[d.collectorId]&&!info[d.collectorId].ok){
+        var cn=S.collectors.filter(function(x){return x.id===d.collectorId;})[0];
+        if(!confirm(cn.name+" is not available then ("+info[d.collectorId].why+"). Assign anyway?")) return;
+      }
       if(d.status==="Cancelled"&&!confirm("Cancel request "+r.code+"? The customer will see it as cancelled.")) return;
       var b=this; b.disabled=true; $("#rErr").textContent="";
       call("d_update_request",d).then(function(res){
@@ -579,6 +653,84 @@
   $("#mapFilter").addEventListener("change",function(){ renderMap(true); });
   $("#showRoutes").addEventListener("change",function(){ renderMap(false); });
 
+  /* ---------- a collector can't continue: mark unavailable, reassign their pickups ---------- */
+  var PROBLEMS=["Vehicle broke down","Not well or an emergency","Can’t reach the area","Other problem"];
+  function bindCollActions(root){
+    $$("[data-reassign]",root).forEach(function(b){ b.addEventListener("click",function(){ openReassign(b.dataset.reassign); }); });
+    $$("[data-unavail]",root).forEach(function(b){ b.addEventListener("click",function(){ markUnavailable(b.dataset.unavail); }); });
+    $$("[data-avail]",root).forEach(function(b){ b.addEventListener("click",function(){ setAvailable(b.dataset.avail,b); }); });
+  }
+  function collById(id){ return S.collectors.filter(function(x){return x.id===id;})[0]; }
+  function markUnavailable(cid){
+    var c=collById(cid); if(!c) return;
+    var body='<p class="detail">While unavailable, '+esc(c.name)+' is not suggested for any pickup. They can still sign in and finish what they have. You can move their open pickups to others straight after.</p>'+
+      '<div class="field"><label for="uWhy">What happened?</label><select id="uWhy">'+PROBLEMS.map(function(p){ return '<option>'+esc(p)+'</option>'; }).join("")+'</select></div>'+
+      '<div class="field"><label for="uNote">Details <span class="hint">Optional</span></label><input type="text" id="uNote"></div><div class="err" id="uErr" role="alert"></div>';
+    SC.dialog(c.name+": mark unavailable",body,'<button class="primary" id="uGo" type="button">Mark unavailable</button>');
+    $("#uGo").addEventListener("click",function(){
+      var b=this, note=$("#uNote").value.trim(), reason=$("#uWhy").value+(note?": "+note:"");
+      b.disabled=true;
+      call("d_collector_status",{id:cid,unavailable:true,reason:reason}).then(function(res){
+        b.disabled=false;
+        if(!res.ok){ $("#uErr").textContent=res.error; return; }
+        SC.closeDialog(); SC.toast(c.name+" is marked unavailable and won’t be suggested.");
+        return refresh(true).then(function(){
+          var cc=collById(cid);
+          if(cc&&cc.openJobs&&confirm("Move "+cc.name+"’s "+cc.openJobs+" open pickup"+(cc.openJobs===1?"":"s")+" to other collectors now?")) openReassign(cid);
+        });
+      }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#uErr").textContent="Couldn’t save. Check your connection."; });
+    });
+  }
+  function setAvailable(cid,btn){
+    var c=collById(cid); if(btn) btn.disabled=true;
+    call("d_collector_status",{id:cid,unavailable:false}).then(function(res){
+      if(!res.ok){ if(btn) btn.disabled=false; SC.toast(res.error); return; }
+      SC.toast((c?c.name:"Collector")+" is available again."); refresh(true);
+    }).catch(function(e){ if(btn) btn.disabled=false; if(e.message!=="auth") SC.toast("Couldn’t save. Check your connection."); });
+  }
+  // One screen to move ALL of a collector's open pickups: suggestions are pre-selected, any can be changed
+  function openReassign(cid){
+    var c=collById(cid); if(!c||!window.SCDispatch) return;
+    var jobs=S.requests.filter(function(r){ return r.collectorId===cid&&(r.status==="Assigned"||r.status==="On the way"); });
+    if(!jobs.length){ SC.toast(c.name+" has no open pickups."); return; }
+    var codes={}; jobs.forEach(function(j){ codes[j.code]=1; });
+    var st=dstate();
+    st.collectors=st.collectors.map(function(x){ if(x.id!==cid) return x; var o={}; for(var k in x) o[k]=x[k]; o.unavailable=x.unavailable||{reason:"being replaced"}; return o; });
+    // only these pickups compete for the other collectors (other waiting requests are left out of this plan)
+    st.requests=st.requests.filter(function(r){ return codes[r.code]||!(r.status==="Received"&&!r.collectorId); }).map(function(r){
+      if(!codes[r.code]) return r; var o={}; for(var k in r) o[k]=r[k]; o.status="Received"; o.collectorId=""; return o;
+    });
+    var sg=SCDispatch.suggest(st);
+    var rows=sg.items.map(function(it){
+      var r=it.req, opts=(it.all||[]).map(function(x,i){
+        return '<option value="'+esc(x.c.id)+'"'+(i===0?" selected":"")+'>'+(i===0?"★ ":"")+esc(x.c.name)+' · '+x.jobs+' open'+(x.dist!=null?" · "+(Math.round(x.dist*10)/10)+" km"+(x.road?" by road":""):"")+'</option>';
+      }).concat((it.excluded||[]).filter(function(e){ return e.c.id!==cid; }).map(function(e){
+        return '<option value="'+esc(e.c.id)+'">'+esc(e.c.name)+' · not available then</option>';
+      }));
+      opts.push('<option value=""'+(it.best?"":" selected")+'>Back to the waiting list</option>');
+      return '<div class="reassign-row"><b>'+esc(r.name)+'</b> <span class="muted">'+esc(r.code)+'</span> <span class="pill '+(codes[r.code]&&jobs.filter(function(j){return j.code===r.code;})[0].status==="On the way"?"live":"")+'">'+esc(jobs.filter(function(j){return j.code===r.code;})[0].status)+'</span>'+
+        '<div class="rc-sub">'+esc(r.addr.slice(0,80))+' · '+esc(SC.day(r.confirmedInput?r.confirmedInput.slice(0,10):r.day))+', '+esc(it.when)+'</div>'+
+        '<div class="rc-sub">'+(it.best?'Suggested: <b>'+esc(it.best.c.name)+'</b> — '+esc(it.reason):esc(it.reason))+'</div>'+
+        '<select data-job="'+esc(r.code)+'" aria-label="New collector for '+esc(r.name)+'">'+opts.join("")+'</select></div>';
+    }).join("");
+    var body='<p class="detail"><b>'+esc(c.name)+'</b>'+(c.unavailable?' — '+esc(c.unavailable.reason):"")+'. Choose who takes each of their '+jobs.length+' pickup'+(jobs.length===1?"":"s")+'. The system’s first choice is selected; change any of them.</p>'+rows+
+      '<div class="field" style="margin-top:12px"><label for="raWhy">Reason <span class="hint">Saved in each request’s office notes</span></label><input type="text" id="raWhy" value="'+esc(c.name+": "+(c.unavailable?c.unavailable.reason:"cannot continue"))+'"></div><div class="err" id="raErr" role="alert"></div>';
+    SC.dialog("Reassign "+c.name+"’s pickups",body,'<button class="primary" id="raGo" type="button">Reassign '+jobs.length+' pickup'+(jobs.length===1?"":"s")+'</button>');
+    $("#raGo").addEventListener("click",function(){
+      var picks=$$("#dlg [data-job]").map(function(sel){ return {code:sel.dataset.job,cid:sel.value}; });
+      var warn=picks.filter(function(p){ var it=sg.byCode[p.code]; return p.cid&&it&&it.excluded.some(function(e){ return e.c.id===p.cid; }); }).length;
+      if(warn&&!confirm(warn+" of these go"+(warn===1?"es":"")+" to a collector who is not available then. Continue?")) return;
+      var b=this, why=$("#raWhy").value, done=0, failed=[]; b.disabled=true; $("#raErr").textContent="";
+      picks.reduce(function(p,x){
+        return p.then(function(){ return call("d_update_request",{code:x.code,collectorId:x.cid,reason:why}).then(function(res){ if(res.ok) done++; else failed.push(x.code+": "+res.error); }); });
+      },Promise.resolve()).then(function(){
+        b.disabled=false;
+        if(failed.length){ $("#raErr").textContent="Moved "+done+" of "+picks.length+". "+failed.join("; "); refresh(true); return; }
+        SC.closeDialog(); SC.toast("Moved "+done+" pickup"+(done===1?"":"s")+" from "+c.name+"."); refresh(true);
+      }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#raErr").textContent="Couldn’t finish. Check your connection, then check which pickups moved."; refresh(true); });
+    });
+  }
+
   /* ---------- collectors ---------- */
   function shiftText(c){
     var sh=c.shift||{}, has=sh.start||sh.end||(sh.days&&sh.days.length);
@@ -588,17 +740,19 @@
   }
   var DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   function renderCollectors(){
-    var tr=tracking();
     $("#clist").innerHTML=S.collectors.length?S.collectors.map(function(c){
       return '<div class="ccard'+(c.active?"":" off")+'"><div class="rc-top"><b style="font-size:18px">'+esc(c.name)+'</b><span class="pill '+(c.active?"ok":"")+'">'+(c.active?"Active":"Off duty")+'</span></div>'+
         '<div class="rc-sub">'+esc(c.phone)+' · '+esc(c.id)+'</div>'+
-        (tr?'<div class="rc-tags"><span class="pill '+collStatus(c).cls+'">'+esc(collStatus(c).text)+'</span></div>':"")+
+        '<div class="rc-tags">'+(tracking()?'<span class="pill '+collStatus(c).cls+'">'+esc(collStatus(c).text)+'</span>':"")+(c.unavailable?'<span class="pill bad">Unavailable: '+esc(c.unavailable.reason)+'</span>':"")+'</div>'+
         '<div class="rc-sub" style="margin-top:6px">Works: '+esc(shiftText(c))+'</div>'+
         '<div class="kv"><span>Open jobs</span><span>'+c.openJobs+'</span><span>Done today</span><span>'+c.doneToday+' · '+SC.num(c.kgToday)+' kg</span><span>Paid out today</span><span>'+SC.money(c.paidToday)+'</span><span>Cash held</span><span>'+SC.money(c.cash.balance)+'</span></div>'+
-        '<div class="btns"><button class="secondary" data-edit="'+esc(c.id)+'">Edit</button><button class="secondary" data-cash="'+esc(c.id)+'">Cash</button></div></div>';
+        '<div class="btns"><button class="secondary" data-edit="'+esc(c.id)+'">Edit</button><button class="secondary" data-cash="'+esc(c.id)+'">Cash</button></div>'+
+        '<div class="btns">'+(c.unavailable?'<button class="secondary" data-avail="'+esc(c.id)+'">Back available</button>':'<button class="secondary" data-unavail="'+esc(c.id)+'">Mark unavailable</button>')+
+        (c.openJobs?'<button class="secondary" data-reassign="'+esc(c.id)+'">Reassign '+c.openJobs+'</button>':"")+'</div></div>';
     }).join(""):'<div class="empty" style="grid-column:1/-1"><b>No collectors yet</b>Add a collector, then give them their phone number and PIN to sign in.</div>';
     $$("#clist [data-edit]").forEach(function(b){ b.addEventListener("click",function(){ editCollector(b.dataset.edit); }); });
     $$("#clist [data-cash]").forEach(function(b){ b.addEventListener("click",function(){ cashDialog(b.dataset.cash); }); });
+    bindCollActions($("#clist"));
   }
   $("#addColl").addEventListener("click",function(){ editCollector(null); });
   function editCollector(id){
