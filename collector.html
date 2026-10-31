@@ -56,9 +56,33 @@ body{background:var(--surface2)}
 .radio input:checked + span{color:var(--brand)}
 .radio label:has(input:checked){border-color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,var(--surface))}
 .radio label:has(input:focus-visible){outline:3px solid var(--hi);outline-offset:2px}
+.duty{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;position:relative;min-height:44px}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.track{width:48px;height:28px;border-radius:14px;background:var(--line);position:relative;display:inline-block;flex:none}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:left .15s}
+.switch input:checked + .track{background:var(--ok)}
+.switch input:checked + .track::after{left:23px}
+.switch input:focus-visible + .track{outline:3px solid var(--hi);outline-offset:2px}
+#dutyNote{font-size:14px;flex:1;min-width:200px}
+@media (prefers-reduced-motion:reduce){.track::after{transition:none}}
 .routecard{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px solid var(--brand);border-radius:14px;padding:14px;margin-bottom:12px}
 .routecard>div{flex:1;min-width:200px}
 .routecard .primary{min-height:46px;flex:none}
+.issuebar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 16px;background:color-mix(in srgb,var(--bad) 12%,var(--surface));border-bottom:2px solid var(--bad);font-size:15px}
+.issuebar b{display:block}
+.photos{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{width:72px;height:72px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+.thumbwrap{position:relative}
+.thumbwrap button{position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;border:none;background:var(--ink);color:var(--surface);cursor:pointer;font-size:15px;line-height:1}
+.add-photo{width:84px;height:72px;border:1.5px dashed var(--muted);border-radius:10px;background:transparent;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700}
+.rcrow{display:grid;grid-template-columns:1fr auto 84px 66px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.rcrow:last-child{border-bottom:none}
+.rcname small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.rcprice{font-family:var(--head);font-size:22px;font-weight:700;white-space:nowrap}
+.rcprice small{font-family:var(--body);font-size:11px;font-weight:400;color:var(--muted)}
+.rcrow input{min-height:42px;text-align:right}
+.rcamt{text-align:right;font-weight:600}
 </style>
 </head>
 <body>
@@ -89,14 +113,23 @@ body{background:var(--surface2)}
     </div>
   </header>
   <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Online</span><span id="qInfo" class="pill warn" style="margin-left:auto" hidden></span></div>
+  <div class="duty" id="duty">
+    <!-- location sharing is switched off for now: remove "hidden" from the next two lines to bring back the On duty switch -->
+    <label class="switch" hidden><input type="checkbox" id="dutySw"><span class="track"></span><span>On duty</span></label>
+    <span class="muted" id="dutyNote" hidden>Off duty. Your location isn’t shared.</span>
+    <button class="link-btn" id="issueBtn" type="button">Problem? Tell the office</button>
+  </div>
+  <div class="issuebar" id="issueBar" role="status" hidden></div>
   <div class="seg" role="tablist">
     <button role="tab" id="tabJobs" aria-selected="true">My jobs</button>
     <button role="tab" id="tabToday" aria-selected="false">Today</button>
     <button role="tab" id="tabMap" aria-selected="false">Map</button>
+    <button role="tab" id="tabRates" aria-selected="false">Rates</button>
   </div>
   <div class="content">
     <section id="v-jobs" aria-label="My jobs"></section>
     <section id="v-today" aria-label="Today" hidden></section>
+    <section id="v-rates" aria-label="Rate card" hidden></section>
     <section id="v-map" aria-label="Map" hidden>
       <div class="btnrow" style="margin-bottom:8px"><button class="secondary" id="meBtn" type="button">Show my location</button></div>
       <div id="jobMap" class="map-box tall"></div>
@@ -135,11 +168,11 @@ body{background:var(--surface2)}
     });
   }
   function showLogin(msg){ $("#login").hidden=false; $("#app").hidden=true; $("#loginErr").textContent=msg||""; }
-  function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); showLogin(msg); }
+  function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); if(typeof stopDuty==="function") stopDuty(); showLogin(msg); }
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
     $("#hello").textContent="Hello, "+(S.name||"collector");
-    render(); processQueue().then(refresh);
+    render(); processQueue().then(refresh); resumeDuty();
     clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
   }
 
@@ -160,7 +193,7 @@ body{background:var(--surface2)}
   }
   $("#signOut").addEventListener("click",function(){
     if(queue.length&&!confirm("You have "+queue.length+" saved update(s) that haven’t been sent. Sign out anyway? They will be lost.")) return;
-    queue=[]; SC.save(QK,queue); S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; SC.save(DK,S); manualPos=null; signedOut("");
+    stopDuty(); queue=[]; SC.save(QK,queue); S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; SC.save(DK,S); signedOut("");
   });
 
   /* ---------- loading jobs ---------- */
@@ -168,7 +201,7 @@ body{background:var(--surface2)}
     if(navigator.onLine===false||!token) return Promise.resolve();
     return call("c_jobs").then(function(res){
       if(!res.ok) return;
-      S={jobs:res.jobs,cash:res.cash,rates:res.rates,name:res.name,today:res.today};
+      S={jobs:res.jobs,cash:res.cash,rates:res.rates,name:res.name,today:res.today,unavailable:res.unavailable||null,ratesAt:Date.now()};
       applyQueue(); SC.save(DK,S); render();
     }).catch(function(){});
   }
@@ -181,22 +214,41 @@ body{background:var(--surface2)}
   }
   function applyQueue(){
     queue.forEach(function(a){
+      if(a.type==="issue"){ S.unavailable={reason:a.label,pending:true}; return; }
       var j=S.jobs.filter(function(x){return x.code===a.code;})[0]; if(!j) return;
+      if(a.type==="photos"){ // counted once per queued action, even if applyQueue runs again
+        j._ph=j._ph||{};
+        if(!j._ph[a.id]){ j._ph[a.id]=1; j.donePhotoCount=(j.donePhotoCount||0)+a.photos.length; }
+        j.photosPending=true; return;
+      }
       if(a.type==="status"&&j.status==="Assigned") j.status="On the way";
-      if(a.type==="complete"&&j.status!=="Completed"){ j.status="Completed"; j.kg=a.est.kg; j.paid=a.est.amt; j.method=a.method; j.pending=true; j.details=a.est.lines; }
+      if(a.type==="complete"&&j.status!=="Completed"){ j.status="Completed"; j.kg=a.est.kg; j.paid=a.est.amt; j.method=a.method; j.pending=true; j.details=a.est.lines; j.donePhotoCount=(a.photos||[]).length; }
       else if(a.type==="complete") j.pending=true;
     });
   }
-  function enqueue(a){ queue.push(a); SC.save(QK,queue); applyQueue(); SC.save(DK,S); render(); processQueue().then(refresh); }
+  function enqueue(a){
+    queue.push(a);
+    if(!SC.save(QK,queue)){
+      // the phone's storage is full: keep the update, drop the photos
+      if(a.photos&&a.photos.length){
+        if(a.type==="photos"){ queue.pop(); SC.toast("There isn’t enough space on this phone to keep those photos until you have signal. Try again when you are online."); return false; }
+        a.photos=[]; a.photosDropped=true;
+      }
+      if(!SC.save(QK,queue)){ queue.pop(); SC.toast("There isn’t enough space on this phone to save that."); return false; }
+      if(a.photosDropped) SC.toast("The photos were too big to keep without signal, so the update was saved without them.");
+    }
+    applyQueue(); SC.save(DK,S); render(); processQueue().then(refresh);
+    return a.photosDropped?"dropped":true;   // "dropped" = saved, but without its photos (the warning is already on screen)
+  }
   function processQueue(){
     if(syncing||!queue.length||navigator.onLine===false||!token) return Promise.resolve();
     syncing=true;
     function next(){
       if(!queue.length){ syncing=false; return Promise.resolve(); }
       var a=queue[0];
-      var req=a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note});
+      var req=a.type==="issue"?call("c_issue",{reason:a.reason,note:a.note}):a.type==="photos"?call("c_photos",{id:a.id,code:a.code,photos:a.photos}):a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note,photos:a.photos||[]});
       return req.then(function(res){
-        if(!(res&&res.ok)) SC.toast(a.code+": "+((res&&res.error)||"couldn’t be saved"));
+        if(!(res&&res.ok)) SC.toast((a.code||"Problem report")+": "+((res&&res.error)||"couldn’t be saved"));
         queue.shift(); SC.save(QK,queue); return next();
       }).catch(function(){ syncing=false; render(); });   // no connection or signed out: keep the queue
     }
@@ -209,12 +261,15 @@ body{background:var(--surface2)}
     $("#tabJobs").setAttribute("aria-selected",t==="jobs"?"true":"false");
     $("#tabToday").setAttribute("aria-selected",t==="today"?"true":"false");
     $("#tabMap").setAttribute("aria-selected",t==="map"?"true":"false");
-    $("#v-jobs").hidden=(t!=="jobs"); $("#v-today").hidden=(t!=="today"); $("#v-map").hidden=(t!=="map");
+    $("#tabRates").setAttribute("aria-selected",t==="rates"?"true":"false");
+    $("#v-jobs").hidden=(t!=="jobs"); $("#v-today").hidden=(t!=="today"); $("#v-map").hidden=(t!=="map"); $("#v-rates").hidden=(t!=="rates");
     if(t==="map") renderMap(true);
+    if(t==="rates") ensureRates(true);
   }
   $("#tabJobs").addEventListener("click",function(){ setTab("jobs"); });
   $("#tabToday").addEventListener("click",function(){ setTab("today"); });
   $("#tabMap").addEventListener("click",function(){ setTab("map"); });
+  $("#tabRates").addEventListener("click",function(){ setTab("rates"); });
 
   /* ---------- screens ---------- */
   function openJobs(){
@@ -223,10 +278,9 @@ body{background:var(--surface2)}
     });
   }
   /* ---------- route plan: the best order for your stops ---------- */
-  // The start point is only known after the collector taps "Show my location"; it stays on this phone.
   var plan=null, planAt=0, manualPos=null;
   function startPoint(){
-    var p=manualPos;
+    var p=(typeof lastPos!=="undefined"&&lastPos)||manualPos;
     return p?[Math.round(p.lat*1000)/1000,Math.round(p.lng*1000)/1000]:null;   // ~100 m, so the same road table is reused
   }
   function jobsKey(jobs){ return jobs.map(function(j){ return j.code+"|"+j.status+"|"+(j.confirmedInput||"")+"|"+j.lat+","+j.lng; }).join(";"); }
@@ -263,8 +317,7 @@ body{background:var(--surface2)}
     if(!plan||!plan.order.length||!window.SCRoute) return "";
     var stops=plan.order.map(function(x){ return {lat:x.lat,lng:x.lng}; });
     return '<div class="routecard"><div><b>Your route: '+plan.order.length+' stop'+(plan.order.length===1?"":"s")+' · '+esc(SCRoute.fmt(plan.km,plan.min,plan.live))+'</b>'+
-      '<div class="hint">Stops are in the order that saves driving. Pickups with an agreed time stay in time order. '+(plan.live?"Road distances, no live traffic.":"Estimated until you are online.")+
-      (plan.start?"":" Tap “Show my location” on the Map tab to plan from where you are.")+'</div></div>'+
+      '<div class="hint">Stops are in the order that saves driving. Pickups with an agreed time stay in time order. '+(plan.live?"Road distances, no live traffic.":"Estimated until you are online.")+'</div></div>'+
       '<a class="primary" href="'+esc(SCRoute.navLink(stops))+'" target="_blank" rel="noopener">Navigate all stops</a></div>';
   }
   function jobCard(j,n){
@@ -289,8 +342,168 @@ body{background:var(--surface2)}
       (done.length?'<h2>Done today</h2>'+done.map(function(j){ return jobCard(j); }).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>');
     $$("#app .job").forEach(function(b){ b.addEventListener("click",function(){ openJob(b.dataset.code); }); });
     if(tab==="map") renderMap(false);
+    renderIssue();
+    ensureRates(false);
     refreshPlan(false);
   }
+
+  /* ---------- camera: photos are shrunk on the phone so they save and send quickly ---------- */
+  function shrink(file){
+    return new Promise(function(res){
+      var r=new FileReader();
+      r.onload=function(){
+        var img=new Image();
+        img.onload=function(){
+          var k=Math.min(1,960/Math.max(img.width,img.height)), c=document.createElement("canvas");
+          c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+          c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+          res(c.toDataURL("image/jpeg",.65));
+        };
+        img.onerror=function(){ res(null); };
+        img.src=r.result;
+      };
+      r.onerror=function(){ res(null); };
+      r.readAsDataURL(file);
+    });
+  }
+  // Fills `box` with the photos in `arr` and "Take photo" / "From gallery" buttons (up to `max` photos)
+  function mountPhotos(box,arr,max,onChange){
+    function draw(){
+      box.innerHTML=arr.map(function(p,i){ return '<div class="thumbwrap"><img class="thumb" alt="Photo '+(i+1)+'" src="'+p+'"><button type="button" aria-label="Remove photo '+(i+1)+'" data-rm="'+i+'">×</button></div>'; }).join("")+
+        (arr.length<max?'<button type="button" class="add-photo" data-cam>Take photo</button><button type="button" class="add-photo" data-gal>From gallery</button>':"")+
+        '<input type="file" accept="image/*" capture="environment" hidden data-fc><input type="file" accept="image/*" multiple hidden data-fg>';
+      $$("[data-rm]",box).forEach(function(b){ b.addEventListener("click",function(){ arr.splice(+b.dataset.rm,1); draw(); onChange(); }); });
+      var fc=$("[data-fc]",box), fg=$("[data-fg]",box), cam=$("[data-cam]",box), gal=$("[data-gal]",box);
+      if(cam) cam.addEventListener("click",function(){ fc.click(); });
+      if(gal) gal.addEventListener("click",function(){ fg.click(); });
+      [fc,fg].forEach(function(inp){ inp.addEventListener("change",function(){
+        var files=Array.prototype.slice.call(inp.files||[]).slice(0,max-arr.length);
+        Promise.all(files.map(shrink)).then(function(list){ list.forEach(function(d){ if(d&&arr.length<max) arr.push(d); }); draw(); onChange(); });
+      }); });
+    }
+    draw();
+  }
+
+  /* ---------- rate card: always available, saved on the phone ---------- */
+  var rcKey="";
+  function ensureRates(force){
+    var k=JSON.stringify(S.rates||[]);
+    if(!force&&k===rcKey) return;
+    if(k===rcKey&&$("#v-rates").innerHTML) return;
+    rcKey=k; drawRates();
+  }
+  function drawRates(){
+    var box=$("#v-rates");
+    if(!S.rates||!S.rates.length){ box.innerHTML='<div class="empty"><b>No rate card saved yet</b>Connect to the internet once. The prices are then saved on this phone.</div>'; return; }
+    var when=S.ratesAt?new Date(S.ratesAt).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
+    box.innerHTML='<h2>Rate card</h2><p class="hint" id="rcNote"></p><div class="card">'+S.rates.map(function(r,i){
+      return '<div class="rcrow"><div class="rcname"><b>'+esc(r.name)+'</b><small>'+esc(r.note||"")+'</small></div><div class="rcprice">'+SC.money(r.rate)+'<small> per kg</small></div>'+
+        '<input type="number" inputmode="decimal" min="0" step="0.01" placeholder="kg" aria-label="kg of '+esc(r.name)+'" data-rc="'+i+'"><div class="rcamt" data-rcamt="'+i+'">0.00</div></div>';
+    }).join("")+'</div><div class="total"><span>Quote total</span><span><span id="rcKg">0</span> kg · <span id="rcAmt">0.00</span></span></div>'+
+      '<div class="btnrow"><button class="secondary" id="rcClear" type="button">Clear</button></div>'+
+      '<p class="hint">A quick calculator for quoting at the door. The price that counts is saved when you complete the pickup.</p>';
+    $("#rcNote").textContent=navigator.onLine===false?"Saved on this phone"+(when?" on "+when:"")+". Prices may have changed since.":"Price per kg, set by the office"+(when?". Updated "+when:"")+".";
+    function calcRc(){
+      var kg=0,amt=0;
+      $$("#v-rates input[data-rc]").forEach(function(i){
+        var r=S.rates[+i.dataset.rc], k=SC.num(i.value), a=SC.num(k*r.rate);
+        $('[data-rcamt="'+i.dataset.rc+'"]').textContent=SC.money(a); kg=SC.num(kg+k); amt=SC.num(amt+a);
+      });
+      $("#rcKg").textContent=kg; $("#rcAmt").textContent=SC.money(amt);
+    }
+    $$("#v-rates input[data-rc]").forEach(function(i){ i.addEventListener("input",calcRc); });
+    $("#rcClear").addEventListener("click",function(){ $$("#v-rates input[data-rc]").forEach(function(i){ i.value=""; }); calcRc(); });
+  }
+
+  /* ---------- tell the office about a problem (vehicle broke down, unwell, ...) ---------- */
+  var ISSUES=[["vehicle","Vehicle broke down"],["unwell","Not well or an emergency"],["area","Can’t reach the area"],["other","Other problem"]];
+  function renderIssue(){
+    var b=$("#issueBar"), u=S.unavailable;
+    b.hidden=!u;
+    if(!u){ $("#issueBtn").hidden=false; return; }
+    $("#issueBtn").hidden=true;
+    b.innerHTML='<div><b>'+(u.pending?"Saved. It will be sent to the office when you’re online.":"The office knows.")+'</b>'+esc(u.reason)+
+      (u.pending?"":'<div class="hint">They will contact you and move your pickups to other collectors if needed. You’ll be marked available again when the office clears this.</div>')+'</div>';
+  }
+  $("#issueBtn").addEventListener("click",function(){
+    var body='<p class="detail">The office is told straight away and can move your pickups to other collectors. They will stop suggesting you for new pickups until they clear this.</p>'+
+      '<div class="field"><label for="iWhy">What happened?</label><select id="iWhy">'+ISSUES.map(function(i){ return '<option value="'+i[0]+'">'+esc(i[1])+'</option>'; }).join("")+'</select></div>'+
+      '<div class="field"><label for="iNote">Details <span class="hint">Optional. Where are you? How long?</span></label><textarea id="iNote"></textarea></div>';
+    SC.dialog("Tell the office",body,'<button class="primary" id="iSend" type="button">Send to the office</button>');
+    $("#iSend").addEventListener("click",function(){
+      var why=$("#iWhy").value, note=$("#iNote").value, label=ISSUES.filter(function(i){return i[0]===why;})[0][1]+(note.trim()?": "+note.trim():"");
+      if(!confirm("Tell the office: "+label+"?")) return;
+      enqueue({id:uid(),type:"issue",reason:why,note:note,label:label});
+      SC.closeDialog();
+      SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"The office has been told.");
+    });
+  });
+
+  /* ---------- on duty: share your location with the office ---------- */
+  var DUTY_K="scrapcall_collector_duty", CONSENT_K="scrapcall_collector_consent", OFF_K="scrapcall_collector_pending_off";
+  var watchId=null, lastPos=null, lastSent=null, sendTimer=null, wake=null, dutyOn=false;
+  function dutyNote(t){ $("#dutyNote").textContent=t; }
+  function kmBetween(a,b){
+    var R=6371,rad=Math.PI/180,dLa=(b.lat-a.lat)*rad,dLn=(b.lng-a.lng)*rad;
+    var h=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLn/2)*Math.sin(dLn/2);
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+  }
+  function requestWake(){
+    if(!dutyOn||!navigator.wakeLock||wake) return;
+    navigator.wakeLock.request("screen").then(function(l){ wake=l; l.addEventListener("release",function(){ wake=null; }); }).catch(function(){});
+  }
+  document.addEventListener("visibilitychange",function(){ if(document.visibilityState==="visible"&&dutyOn) requestWake(); });
+  function sendPos(force){
+    if(!dutyOn||!lastPos||!token||navigator.onLine===false) return Promise.resolve();
+    return call("c_ping",{lat:lastPos.lat,lng:lastPos.lng,acc:lastPos.acc,duty:true}).then(function(res){
+      if(res&&res.ok){ lastSent={lat:lastPos.lat,lng:lastPos.lng,at:Date.now()}; dutyNote("On duty. The office can see where you are."); }
+    }).catch(function(){});
+  }
+  function onPos(p){
+    var acc=Math.round(p.coords.accuracy||0);
+    if(acc>1500) { dutyNote("On duty, but your location is not accurate yet. Move to an open area."); return; }
+    lastPos={lat:Math.round(p.coords.latitude*1e6)/1e6,lng:Math.round(p.coords.longitude*1e6)/1e6,acc:acc,at:Date.now()};
+    if(cmap&&window.SCMap&&tab==="map"){
+      if(mePin) mePin.setLatLng([lastPos.lat,lastPos.lng]); else { mePin=L.marker([lastPos.lat,lastPos.lng],{icon:SCMap.pinIcon("","p-me")}); mePin.addTo(cmap); }
+    }
+    if(plan&&!plan.start) refreshPlan(true);
+    // send the first fix, then when you have moved 100 m (at most every 30 s); the timer sends every 2 minutes anyway
+    if(!lastSent||(Date.now()-lastSent.at>30000&&kmBetween(lastSent,lastPos)>0.1)) sendPos();
+  }
+  function onPosErr(e){
+    if(e&&e.code===1){ stopDuty(); SC.toast("Location is blocked for this app. Allow location in your browser settings, then switch On duty again."); }
+    else dutyNote("On duty, but your location can’t be found yet. Move to an open area.");
+  }
+  function startDuty(){
+    if(!navigator.geolocation){ $("#dutySw").checked=false; SC.toast("This phone can’t share its location."); return; }
+    if(!SC.load(CONSENT_K,false)){
+      if(!confirm("While you are On duty, the app shares your location with the office so they can send you pickups near you.\n\nSharing stops when you switch off duty or sign out. Keep the app open on screen: it can’t share your location when it is closed or the phone is locked.\n\nSwitch on duty?")){ $("#dutySw").checked=false; return; }
+      SC.save(CONSENT_K,true);
+    }
+    dutyOn=true; SC.save(DUTY_K,true); SC.drop(OFF_K); lastSent=null;
+    dutyNote("On duty. Finding your location…");
+    watchId=navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:30000,timeout:30000});
+    clearInterval(sendTimer); sendTimer=setInterval(function(){ sendPos(); },120000);
+    requestWake();
+  }
+  function pingOff(){
+    if(!token) return;
+    if(navigator.onLine===false){ SC.save(OFF_K,true); return; }
+    call("c_ping",{duty:false}).then(function(res){ if(res&&res.ok) SC.drop(OFF_K); else SC.save(OFF_K,true); }).catch(function(){ SC.save(OFF_K,true); });
+  }
+  function stopDuty(){
+    var was=dutyOn; dutyOn=false; SC.save(DUTY_K,false); $("#dutySw").checked=false;
+    if(watchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+    watchId=null; clearInterval(sendTimer); lastPos=null; lastSent=null;
+    if(wake){ try{wake.release();}catch(e){} wake=null; }
+    dutyNote("Off duty. Your location isn’t shared.");
+    if(was||SC.load(OFF_K,false)) pingOff();
+  }
+  $("#dutySw").addEventListener("change",function(){ if(this.checked) startDuty(); else stopDuty(); });
+  window.addEventListener("online",function(){
+    if(dutyOn) sendPos(); else if(SC.load(OFF_K,false)) pingOff();
+  });
+  function resumeDuty(){ if(SC.load(DUTY_K,false)){ $("#dutySw").checked=true; startDuty(); } }
 
   /* ---------- map of today's stops ---------- */
   var cmap=null, clayer=null, mePin=null, jmap=null;
@@ -358,8 +571,10 @@ body{background:var(--surface2)}
       (j.notes?'<p class="detail"><b>Customer notes:</b> '+esc(j.notes)+'</p>':"")+
       (photos?'<div class="photos detail">'+photos+'</div>':"")+
       (j.phoneOk?"":'<p class="detail"><b>The office hasn’t confirmed this customer’s phone number yet.</b></p>')+
-      (j.status==="Completed"?'<div class="sec">Collected</div><p class="detail"><b>'+SC.kg(j.kg)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')'+(j.pending?" · waiting to send":"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"");
+      (j.status==="Completed"?'<div class="sec">Collected</div><p class="detail"><b>'+SC.kg(j.kg)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')'+(j.pending?" · waiting to send":"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"")+
+      (j.status==="Completed"?'<div class="sec">Photos</div><p class="detail">'+(j.donePhotoCount?j.donePhotoCount+" saved"+(j.photosPending||j.pending?" (some waiting to send)":""):"No photos yet")+'. You can add a photo of the scrap, the receipt or the handover.</p><div class="photos" id="aPhotos"></div>':"");
     var foot="";
+    if(j.status==="Completed"&&(j.donePhotoCount||0)<8) foot+='<button class="primary" id="aSave" type="button" disabled>Save photos</button>';
     if(j.status==="Assigned") foot+='<button class="secondary" id="jWay" type="button">I’m on the way</button>';
     if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="primary" id="jDone" type="button">Complete pickup</button>';
     SC.dialog(j.code,body,foot||null);
@@ -367,6 +582,17 @@ body{background:var(--surface2)}
       jmap=SCMap.create($("#jMap"),{center:{lat:j.lat,lng:j.lng,zoom:16}});
       L.marker([j.lat,j.lng],{icon:SCMap.pinIcon("","p-set")}).addTo(jmap);
       setTimeout(function(){ if(jmap) jmap.invalidateSize(); },150);
+    }
+    if(j.status==="Completed"&&$("#aPhotos")){
+      var apics=[], room=Math.max(0,Math.min(4,8-(j.donePhotoCount||0)));
+      if(room>0) mountPhotos($("#aPhotos"),apics,room,function(){ var b=$("#aSave"); if(b) b.disabled=!apics.length; });
+      else $("#aPhotos").innerHTML='<span class="hint">This pickup already has 8 photos.</span>';
+      var ab=$("#aSave"); if(ab) ab.addEventListener("click",function(){
+        if(!apics.length) return;
+        var sent2=enqueue({id:uid(),type:"photos",code:j.code,photos:apics.slice()});
+        if(sent2===false) return;
+        SC.closeDialog(); if(sent2!=="dropped") SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"Photos saved.");
+      });
     }
     var w=$("#jWay"); if(w) w.addEventListener("click",function(){
       enqueue({id:uid(),type:"status",code:j.code,status:"On the way"}); SC.closeDialog();
@@ -386,10 +612,12 @@ body{background:var(--surface2)}
     }).join("");
     var body='<p class="detail">Weigh each item and enter the kg. Prices come from the office rate list.</p>'+rows+
       '<div class="total"><span>Total</span><span><span id="tKg">0</span> kg · <span id="tAmt">0.00</span></span></div>'+
+      '<div class="sec">Photos <span class="hint">Optional. A picture of the scrap on the scale helps if there is a question later.</span></div><div class="photos" id="jPhotos"></div>'+
       '<div class="sec">How did you pay the customer?</div>'+
       '<div class="radio"><label><input type="radio" name="method" value="Cash" checked><span>Cash</span></label><label><input type="radio" name="method" value="Digital"><span>Digital</span></label></div>'+
       '<div class="field" style="margin-top:14px"><label for="jNote">Note <span class="hint">Optional</span></label><textarea id="jNote"></textarea></div>';
     SC.dialog("Complete "+j.code,body,'<button class="primary" id="jSave" type="button" disabled>Save pickup</button>');
+    var cpics=[]; mountPhotos($("#jPhotos"),cpics,4,function(){});
     function calc(){
       var kg=0,amt=0,items=[],lines=[];
       $$("#dlg input[data-t]").forEach(function(i){
@@ -405,10 +633,11 @@ body{background:var(--surface2)}
     $("#jSave").addEventListener("click",function(){
       var c=calc(); if(!(c.kg>0)) return;
       var method=$("#dlg input[name=method]:checked").value;
-      if(!confirm("Save this pickup?\n"+c.kg+" kg, total "+SC.money(c.amt)+", paid by "+method.toLowerCase()+".")) return;
-      enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:$("#jNote").value,est:{kg:c.kg,amt:c.amt,lines:c.lines}});
+      if(!confirm("Save this pickup?\n"+c.kg+" kg, total "+SC.money(c.amt)+", paid by "+method.toLowerCase()+"."+(cpics.length?"\n"+cpics.length+" photo"+(cpics.length===1?"":"s")+" attached.":""))) return;
+      var sent=enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:$("#jNote").value,photos:cpics.slice(),est:{kg:c.kg,amt:c.amt,lines:c.lines}});
+      if(sent===false) return;
       SC.closeDialog();
-      SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"Pickup saved.");
+      if(sent!=="dropped") SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"Pickup saved.");
       setTab("today");
     });
   }

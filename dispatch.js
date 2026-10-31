@@ -1,6 +1,6 @@
 /* ScrapCall dispatch suggestions: which collector should take which pickup.
  *
- * A collector is only suggested if they are PRESENT at the time and place:
+ * A collector is only suggested if they are PRESENT at the time and place (and not marked unavailable):
  *   1. Time: their working days and hours (set by the director) cover the time the customer wants,
  *      and they are not already booked then.
  *        - an agreed time (e.g. 14:00) must fall inside their shift, and no other pickup within 45 minutes of it
@@ -95,6 +95,8 @@
     state.collectors.forEach(function (c) {
       if (!c.active) return;
       var no = function (why) { out.excluded.push({ c: c, why: why }); };
+      // the collector (or the office) reported a problem: vehicle broke down, unwell, ...
+      if (c.unavailable) return no("is unavailable (" + (c.unavailable.reason || "reported a problem") + ")");
 
       var sc = shiftCheck(c, day, w);
       if (!sc.ok) return no(sc.why);
@@ -154,7 +156,7 @@
   }
 
   // state: { today:"yyyy-mm-dd", nowMin:minutes since midnight (optional), requests:[...],
-  //          collectors:[{id,name,active,shift:{start,end,days},loc:{lat,lng,duty},locAge:sec}], dist:fn (optional) }
+  //          collectors:[{id,name,active,shift:{start,end,days},unavailable:{reason}|null,loc:{lat,lng,duty},locAge:sec}], dist:fn (optional) }
   function suggest(state) {
     var waiting = state.requests.filter(function (r) { return r.status === "Received" && !r.collectorId; });
     // earliest day first; on the same day requests with a map pin go before ones without
