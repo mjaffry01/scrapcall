@@ -77,6 +77,12 @@
 .iconpick .itemico{width:44px;height:44px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--brand);flex:none}
 .iconpick .itemico .ico{width:28px;height:28px}
 .iconpick select{min-width:0}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.thumbs img,.thumbs .ph{display:block;width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid var(--line);background:var(--surface2)}
+.thumbs.big img,.thumbs.big .ph{width:96px;height:96px}
+.phgrid{display:flex;gap:10px;flex-wrap:wrap}
+.phcard{background:none;border:1px solid var(--line);border-radius:12px;padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:4px;align-items:center;color:inherit;font-size:13px}
+.phcard .thumbs{margin-top:0}
 </style>
 </head>
 <body>
@@ -118,6 +124,7 @@
       <p class="lede" id="ovDate"></p>
       <div id="ovAlerts"></div>
       <div class="stats" id="ovStats"></div>
+      <div id="ovPhotos"></div>
       <div class="card">
         <h2>Waiting for a collector</h2>
         <div id="ovWaiting"></div>
@@ -259,6 +266,29 @@
 
   function renderAll(){ renderOverview(); renderRequests(); renderCollectors(); if(view==="map") renderMap(false); }
 
+  /* ---------- photo thumbnails: the photos are private in Drive, so small previews come through the backend ---------- */
+  var TH={}, thPending={};
+  // link=true makes each picture open the full photo (not inside request cards, which are buttons themselves)
+  function thumbsHtml(urls,big,link){
+    urls=(urls||[]).filter(function(u){ return SC.safeLink(u); });
+    if(!urls.length) return "";
+    return '<div class="thumbs'+(big?" big":"")+'">'+urls.map(function(u,i){
+      var pic=TH[u]?'<img alt="Photo '+(i+1)+'" src="'+TH[u]+'">':'<span class="ph" data-th="'+esc(u)+'"></span>';
+      return link?'<a href="'+esc(u)+'" target="_blank" rel="noopener" aria-label="Open photo '+(i+1)+'">'+pic+'</a>':pic;
+    }).join("")+'</div>';
+  }
+  function loadThumbs(){
+    var need=$$("[data-th]").map(function(e){ return e.dataset.th; }).filter(function(u,i,a){ return !TH[u]&&!thPending[u]&&a.indexOf(u)===i; }).slice(0,24);
+    if(!need.length) return;
+    need.forEach(function(u){ thPending[u]=1; });
+    call("d_thumbs",{urls:need}).then(function(res){
+      need.forEach(function(u){ delete thPending[u]; });
+      if(!res.ok) return;
+      for(var u in res.thumbs) TH[u]=res.thumbs[u];
+      $$("[data-th]").forEach(function(e){ var d=TH[e.dataset.th]; if(d){ var img=document.createElement("img"); img.alt=""; img.src=d; e.replaceWith(img); } });
+    }).catch(function(){ need.forEach(function(u){ delete thPending[u]; }); });
+  }
+
   /* ---------- collector positions and dispatch suggestions ---------- */
   function q3(v){ return Math.round(v*1000)/1000; }
   // Collector positions are rounded to about 100 m so road tables and routes can be reused between refreshes
@@ -395,6 +425,12 @@
     $$("#ovStats [data-go]").forEach(function(b){ b.addEventListener("click",function(){
       filter=b.dataset.go; query=""; $("#search").value=""; setView("requests"); renderRequests();
     }); });
+    var withPh=S.requests.filter(function(r){ return (r.donePhotos||[]).length; }).sort(function(a,b){ return (b.doneAt||"").localeCompare(a.doneAt||""); }).slice(0,6);
+    $("#ovPhotos").innerHTML=withPh.length?'<div class="card"><h2>Latest pickup photos</h2><div class="phgrid">'+withPh.map(function(r){
+      return '<button type="button" class="phcard" data-open="'+esc(r.code)+'">'+thumbsHtml(r.donePhotos.slice(0,1),true,false)+'<span><b>'+esc(r.code)+'</b> · '+esc(r.collector||"")+(r.donePhotos.length>1?" · "+r.donePhotos.length+" photos":"")+'</span></button>';
+    }).join("")+'</div></div>':"";
+    $$("#ovPhotos [data-open]").forEach(function(b){ b.addEventListener("click",function(){ openRequest(b.dataset.open); }); });
+    loadThumbs();
     var sg=sug();
     $("#ovWaiting").innerHTML=sg.items.length?sugBlock(sg,6):'<div class="empty"><b>Nothing waiting</b>New customer requests will show up here with a suggested collector.</div>';
     bindSug($("#ovWaiting"),sg);
@@ -437,9 +473,11 @@
         '<div class="rc-sub">'+esc(r.confirmed?"Confirmed: "+r.confirmed:"Wants: "+SC.day(r.day)+", "+r.slot.toLowerCase())+'</div>'+
         '<div class="rc-sub">'+esc(r.addr.slice(0,90))+'</div>'+
         '<div class="rc-tags">'+(r.phoneOk?'<span class="pill ok">Phone confirmed</span>':'<span class="pill warn">Phone not confirmed</span>')+
-        (r.collector?'<span class="pill live">'+esc(r.collector)+'</span>':'<span class="pill">Unassigned</span>')+'</div></button>';
+        (r.collector?'<span class="pill live">'+esc(r.collector)+'</span>':'<span class="pill">Unassigned</span>')+'</div>'+
+        thumbsHtml((r.donePhotos||[]).slice(0,4),false,false)+'</button>';
     }).join(""):'<div class="empty" style="grid-column:1/-1"><b>No requests here</b>Try another filter or clear the search.</div>';
     $$("#rlist .rcard").forEach(function(b){ b.addEventListener("click",function(){ openRequest(b.dataset.code); }); });
+    loadThumbs();
   }
   $("#search").addEventListener("input",function(){ query=this.value.trim().toLowerCase(); renderRequests(); });
 
@@ -498,8 +536,8 @@
       '<p class="detail"><b>Scrap:</b> '+esc(r.types)+' — '+esc(r.qty)+'</p>'+
       '<p class="detail"><b>Customer wants:</b> '+esc(SC.day(r.day))+', '+esc(r.slot.toLowerCase())+'</p>'+
       (r.notes?'<p class="detail"><b>Customer notes:</b> '+esc(r.notes)+'</p>':"")+
-      (photos?'<div class="photos detail">'+photos+'</div>':"")+
-      (dphotos?'<div class="sec">Collector’s photos</div><div class="photos detail">'+dphotos+'</div>':"")+
+      (photos?'<div class="sec">Customer’s photos</div>'+thumbsHtml(r.photos,true,true)+'<div class="photos detail">'+photos+'</div>':"")+
+      (dphotos?'<div class="sec">Collector’s photos</div>'+thumbsHtml(r.donePhotos,true,true)+'<div class="photos detail">'+dphotos+'</div>':"")+
       notColl+done+
       '<div class="sec">Map pin</div>'+
       '<div class="mapbar" id="rMapBar"><input type="search" id="rMapQ" aria-label="Search the map" placeholder="Search address or place" value="'+esc(r.addr.slice(0,120))+'"><button type="button" class="map-btn" id="rMapFind">Find</button></div>'+
@@ -516,6 +554,7 @@
       '<div class="field"><label for="rOffice">Office notes</label><textarea id="rOffice">'+esc(r.office)+'</textarea></div>'+
       '<div class="err" id="rErr" role="alert"></div>';
     SC.dialog(r.code,body,'<button class="primary" id="rSave" type="button">Save</button>');
+    loadThumbs();
     var pinLat=r.lat, pinLng=r.lng, pinChanged=false;
     function pinUi(){
       var has=!!(window.SCMap&&SCMap.valid(pinLat,pinLng));
