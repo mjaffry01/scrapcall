@@ -51,7 +51,7 @@
 .kv span:nth-child(even){text-align:right;font-weight:600}
 .ccard .btns{display:flex;gap:8px;margin-top:10px}
 .ccard .btns>*{flex:1;min-height:42px;font-size:15px}
-.rate-row{display:grid;grid-template-columns:2fr 2fr 110px 70px 44px;gap:8px;align-items:center;margin-bottom:8px}
+.rate-row{display:grid;grid-template-columns:2fr 2fr 100px 150px 70px 44px;gap:8px;align-items:center;margin-bottom:8px}
 .rate-row .del{min-height:44px;border:1.5px solid var(--line);background:var(--surface);border-radius:10px;cursor:pointer;font-size:18px}
 .rate-head{font-size:13px;color:var(--muted);font-weight:600}
 @media (max-width:640px){
@@ -155,9 +155,9 @@
 
     <section class="view" id="v-rates" aria-label="Items and rates" hidden>
       <h1>Items and rates</h1>
-      <p class="lede">Customers choose from these items, and collectors are paid by these rates. Set an item to hidden to take it off the form without deleting it.</p>
+      <p class="lede">Customers choose from these items. For each one, choose whether collectors <b>weigh</b> it (price per kg) or <b>count</b> it (price per piece, like a TV or a fridge). Collectors are paid by these prices. Set an item to hidden to take it off the form without deleting it.</p>
       <div class="card">
-        <div class="rate-row rate-head"><span>Item</span><span>Note</span><span>Rate per kg</span><span>Shown</span><span></span></div>
+        <div class="rate-row rate-head"><span>Item</span><span>Note</span><span>Price</span><span>Priced</span><span>Shown</span><span></span></div>
         <div id="rateRows"></div>
         <div class="bar" style="margin-top:12px">
           <button class="secondary" id="addRate" type="button">Add item</button>
@@ -196,7 +196,7 @@
 <script>
 (function(){
   var $=SC.$, $$=SC.$$, esc=SC.esc, TK="scrapcall_director_token";
-  var STATUSES=["Received","Assigned","On the way","Completed","Cancelled"];
+  var STATUSES=["Received","Assigned","On the way","Completed","Cancelled","Not collected"];
   var dlgPicker=null;
   $("#dlg").addEventListener("close",function(){ if(dlgPicker&&dlgPicker.map){ try{dlgPicker.map.remove();}catch(e){} } dlgPicker=null; });
   var token=SC.load(TK,null), S={requests:[],collectors:[],cash:[],today:""}, view="overview", filter="new", query="", lastReport=null, timer=null;
@@ -353,9 +353,10 @@
 
   /* ---------- overview ---------- */
   function stats(){
-    var o={fresh:0,phone:0,out:0,done:0,kg:0,paid:0};
+    var o={fresh:0,phone:0,out:0,done:0,kg:0,paid:0,notcol:0};
     S.requests.forEach(function(r){
-      var active=r.status!=="Completed"&&r.status!=="Cancelled";
+      var active=r.status!=="Completed"&&r.status!=="Cancelled"&&r.status!=="Not collected";
+      if(r.status==="Not collected") o.notcol++;
       if(r.status==="Received"&&!r.collectorId) o.fresh++;
       if(active&&!r.phoneOk) o.phone++;
       if(r.status==="Assigned"||r.status==="On the way") o.out++;
@@ -380,6 +381,7 @@
     $("#ovStats").innerHTML=
       statCard(o.fresh,"New requests to assign","new",true)+
       statCard(o.phone,"Phone numbers to confirm","phone",true)+
+      statCard(o.notcol,"Not collected: needs follow-up","notcol",true)+
       statCard(o.out,"Out with collectors","active",false)+
       statCard(o.done,"Completed today","done",false)+
       (tracking()?'<div class="stat static"><div class="n">'+onDutyCount()+'/'+S.collectors.filter(function(c){return c.active;}).length+'</div><div class="l">collectors on duty</div></div>':"")+
@@ -399,16 +401,17 @@
 
   /* ---------- requests list ---------- */
   function inFilter(r,f){
-    var active=r.status!=="Completed"&&r.status!=="Cancelled";
+    var active=r.status!=="Completed"&&r.status!=="Cancelled"&&r.status!=="Not collected";
     if(f==="new") return r.status==="Received";
     if(f==="phone") return active&&!r.phoneOk;
     if(f==="active") return r.status==="Assigned"||r.status==="On the way";
     if(f==="done") return r.status==="Completed";
+    if(f==="notcol") return r.status==="Not collected";
     if(f==="cancelled") return r.status==="Cancelled";
     return true;
   }
-  var FILTERS=[["new","New"],["phone","Phone to confirm"],["active","With collectors"],["done","Completed"],["cancelled","Cancelled"],["all","All"]];
-  function pillClass(s){ return s==="Completed"?"ok":s==="Cancelled"?"bad":s==="Received"?"warn":"live"; }
+  var FILTERS=[["new","New"],["phone","Phone to confirm"],["active","With collectors"],["notcol","Not collected"],["done","Completed"],["cancelled","Cancelled"],["all","All"]];
+  function pillClass(s){ return s==="Completed"?"ok":s==="Cancelled"||s==="Not collected"?"bad":s==="Received"?"warn":"live"; }
   function renderRequests(){
     var nNew=S.requests.filter(function(r){return r.status==="Received";}).length;
     $("#newBadge").hidden=!nNew; $("#newBadge").textContent=nNew;
@@ -477,7 +480,10 @@
     var wa=SC.waHref(r.phone);
     var photos=r.photos.map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
     var dphotos=(r.donePhotos||[]).map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
-    var done=r.status==="Completed"&&r.kg>0?'<div class="sec">Collected</div><p class="detail"><b>'+SC.kg(r.kg)+'</b> · paid <b>'+SC.money(r.paid)+'</b> ('+esc(r.method)+')</p><p class="detail" style="white-space:pre-line">'+esc(r.details)+'</p>':"";
+    var ncLine=(String(r.office||"").split("\n").filter(function(l){ return /^Not collected:/.test(l); }).pop())||"";
+    var notColl=r.status==="Not collected"?'<div class="alertcard" style="margin:10px 0"><div><b>Not collected</b><div class="rc-sub">'+esc(ncLine.replace(/^Not collected:\s*/,"")||"The collector reported nothing was collected.")+'</div></div>'+
+      '<div class="sugbtns"><button type="button" class="primary" data-nc="wait">Back to the waiting list</button><button type="button" class="secondary" data-nc="retry">Try again with '+esc(r.collector||"the same collector")+'</button><button type="button" class="danger" data-nc="cancel">Cancel request</button></div></div>':"";
+    var done=r.status==="Completed"&&(r.kg>0||r.pieces>0||r.paid>0)?'<div class="sec">Collected</div><p class="detail"><b>'+SC.qty(r.kg,r.pieces)+'</b> · paid <b>'+SC.money(r.paid)+'</b> ('+esc(r.method)+')</p><p class="detail" style="white-space:pre-line">'+esc(r.details)+'</p>':"";
     var body=
       '<p class="detail"><b>'+esc(r.name)+'</b> · received '+esc(SC.when(r.at))+'</p>'+
       '<div class="bar"><a class="linkbtn" href="'+esc(SC.telHref(r.phone))+'">Call '+esc(r.phone)+'</a>'+(wa?'<a class="linkbtn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp</a>':"")+
@@ -489,7 +495,7 @@
       (r.notes?'<p class="detail"><b>Customer notes:</b> '+esc(r.notes)+'</p>':"")+
       (photos?'<div class="photos detail">'+photos+'</div>':"")+
       (dphotos?'<div class="sec">Collector’s photos</div><div class="photos detail">'+dphotos+'</div>':"")+
-      done+
+      notColl+done+
       '<div class="sec">Map pin</div>'+
       '<div class="mapbar" id="rMapBar"><input type="search" id="rMapQ" aria-label="Search the map" placeholder="Search address or place" value="'+esc(r.addr.slice(0,120))+'"><button type="button" class="map-btn" id="rMapFind">Find</button></div>'+
       '<div id="rMapResults"></div><div id="rMap" class="map-box small"></div>'+
@@ -527,6 +533,17 @@
       if(window.SCMap) SCMap.offNote($("#rMap"),"The map needs an internet connection.");
     }
     pinUi();
+    $$("#dlg [data-nc]").forEach(function(b){ b.addEventListener("click",function(){
+      var k=b.dataset.nc, d={code:r.code};
+      if(k==="wait"){ d.collectorId=""; d.status="Received"; d.reason="Not collected: rebooking"; }
+      else if(k==="retry"){ d.status="Assigned"; }
+      else { if(!confirm("Cancel request "+r.code+"? The customer will see it as cancelled.")) return; d.status="Cancelled"; }
+      b.disabled=true;
+      call("d_update_request",d).then(function(res){
+        if(!res.ok){ b.disabled=false; $("#rErr").textContent=res.error; return; }
+        SC.closeDialog(); SC.toast(k==="wait"?"Back on the waiting list.":k==="retry"?"Sent back to the collector.":"Request cancelled."); refresh(true);
+      }).catch(function(e){ b.disabled=false; if(e.message!=="auth") $("#rErr").textContent="Couldn’t save. Check your connection."; });
+    }); });
     $$("#dlg [data-pick]").forEach(function(b){ b.addEventListener("click",function(){
       var sel=$("#rColl"); sel.value=b.dataset.pick; sel.dispatchEvent(new Event("change"));
     }); });
@@ -577,7 +594,7 @@
   function mapRows(){
     var f=$("#mapFilter").value;
     return S.requests.filter(function(r){
-      if(r.status==="Completed"||r.status==="Cancelled") return false;
+      if(r.status==="Completed"||r.status==="Cancelled"||r.status==="Not collected") return false;
       if(f==="new") return r.status==="Received";
       if(f==="active") return r.status==="Assigned"||r.status==="On the way";
       return true;
@@ -808,11 +825,12 @@
 
   /* ---------- items and rates ---------- */
   function rateRow(r){
-    r=r||{name:"",note:"",rate:"",active:true};
+    r=r||{name:"",note:"",rate:"",active:true,unit:"kg"};
     var d=document.createElement("div"); d.className="rate-row";
     d.innerHTML='<input type="text" aria-label="Item name" placeholder="Item" value="'+esc(r.name)+'" data-k="name">'+
       '<input type="text" aria-label="Note" placeholder="Note" value="'+esc(r.note)+'" data-k="note">'+
-      '<input type="number" aria-label="Rate per kg" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="'+esc(r.rate)+'" data-k="rate">'+
+      '<input type="number" aria-label="Price" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="'+esc(r.rate)+'" data-k="rate">'+
+      '<select aria-label="Priced by" data-k="unit"><option value="kg"'+(r.unit==="piece"?"":" selected")+'>Per kg (weighed)</option><option value="piece"'+(r.unit==="piece"?" selected":"")+'>Per piece (counted)</option></select>'+
       '<label class="check" style="margin:0"><input type="checkbox" data-k="active"'+(r.active?" checked":"")+' aria-label="Shown to customers"></label>'+
       '<button class="del" type="button" aria-label="Remove item">×</button>';
     d.querySelector(".del").addEventListener("click",function(){ d.remove(); });
@@ -830,7 +848,7 @@
   $("#saveRates").addEventListener("click",function(){
     var rates=$$("#rateRows .rate-row").map(function(row){
       var g=function(k){ return row.querySelector('[data-k="'+k+'"]'); };
-      return {name:g("name").value,note:g("note").value,rate:g("rate").value===""?0:g("rate").value,active:g("active").checked};
+      return {name:g("name").value,note:g("note").value,rate:g("rate").value===""?0:g("rate").value,unit:g("unit").value,active:g("active").checked};
     });
     var b=this; b.disabled=true; $("#rateErr").textContent="";
     call("d_rates_save",{rates:rates}).then(function(res){
@@ -863,8 +881,8 @@
       lastReport=res; $("#csv").hidden=!res.rows.length;
       if(!res.totals.jobs){ $("#repOut").innerHTML='<div class="empty"><b>No completed pickups</b>Nothing was completed between '+esc(res.from)+' and '+esc(res.to)+'.</div>'; return; }
       $("#repOut").innerHTML=
-        '<div class="stats"><div class="stat static"><div class="n">'+res.totals.jobs+'</div><div class="l">pickups completed</div></div><div class="stat static"><div class="n">'+SC.num(res.totals.kg)+'</div><div class="l">kg collected</div></div><div class="stat static"><div class="n">'+SC.money(res.totals.paid)+'</div><div class="l">paid to customers</div></div></div>'+
-        '<div class="card"><h2>By item</h2>'+table(["Item","kg","Amount"],res.byType.map(function(x){return [esc(x.name),SC.num(x.kg),SC.money(x.amount)];}))+'</div>'+
+        '<div class="stats"><div class="stat static"><div class="n">'+res.totals.jobs+'</div><div class="l">pickups completed</div></div><div class="stat static"><div class="n">'+SC.num(res.totals.kg)+'</div><div class="l">kg weighed</div></div>'+(res.totals.pieces?'<div class="stat static"><div class="n">'+res.totals.pieces+'</div><div class="l">pieces counted</div></div>':"")+'<div class="stat static"><div class="n">'+SC.money(res.totals.paid)+'</div><div class="l">paid to customers</div></div></div>'+
+        '<div class="card"><h2>By item</h2>'+table(["Item","Quantity","Amount"],res.byType.map(function(x){return [esc(x.name),x.unit==="piece"?x.qty+(x.qty===1?" piece":" pieces"):SC.num(x.kg)+" kg",SC.money(x.amount)];}))+'</div>'+
         '<div class="card"><h2>By collector</h2>'+table(["Collector","Pickups","kg","Paid"],res.byCollector.map(function(x){return [esc(x.name),x.jobs,SC.num(x.kg),SC.money(x.paid)];}))+'</div>'+
         '<div class="card"><h2>By day</h2>'+table(["Day","Pickups","kg","Paid"],res.byDay.map(function(x){return [esc(x.day),x.jobs,SC.num(x.kg),SC.money(x.paid)];}))+'</div>';
     }).catch(function(e){ b.disabled=false; if(e.message!=="auth") SC.toast("Couldn’t load the report. Check your connection."); });
@@ -873,8 +891,8 @@
   $("#csv").addEventListener("click",function(){
     if(!lastReport) return;
     var q=function(v){ v=String(v==null?"":v); if(/^[=+\-@]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; };
-    var lines=[["Code","Day","Customer","Collector","Items","kg","Paid","Payment","Address","Details"].map(q).join(",")];
-    lastReport.rows.forEach(function(r){ lines.push([r.code,r.day,r.name,r.collector,r.types,r.kg,r.paid,r.method,r.addr,r.details.replace(/\n/g,"; ")].map(q).join(",")); });
+    var lines=[["Code","Day","Customer","Collector","Items","kg","Pieces","Paid","Payment","Address","Details"].map(q).join(",")];
+    lastReport.rows.forEach(function(r){ lines.push([r.code,r.day,r.name,r.collector,r.types,r.kg,r.pieces,r.paid,r.method,r.addr,r.details.replace(/\n/g,"; ")].map(q).join(",")); });
     var blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
     var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="scrapcall-"+lastReport.from+"-to-"+lastReport.to+".csv";
     document.body.appendChild(a); a.click(); a.remove();

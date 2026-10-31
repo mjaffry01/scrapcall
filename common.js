@@ -15,6 +15,13 @@
   SC.num = function (n) { return Math.round((Number(n) || 0) * 100) / 100; };
   SC.money = function (n) { return SC.num(n).toFixed(2); };
   SC.kg = function (n) { return SC.num(n) + " kg"; };
+  // "12.5 kg", "3 pieces" or "12.5 kg · 3 pieces": weighed items count in kg, counted items in pieces
+  SC.qty = function (kg, pcs) {
+    var p = [];
+    if (kg > 0) p.push(SC.num(kg) + " kg");
+    if (pcs > 0) p.push(pcs + (pcs === 1 ? " piece" : " pieces"));
+    return p.length ? p.join(" · ") : "0 kg";
+  };
 
   // Every call goes to the Google Apps Script link as plain text (avoids browser pre-flight checks)
   SC.api = function (payload) {

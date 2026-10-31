@@ -238,7 +238,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
         <h1>Today’s rates</h1>
         <p class="lede" id="ratesNote"></p>
         <div class="card" id="rateList"></div>
-        <p class="hint">The final price is set by weighing at your door.</p>
+        <p class="hint">The final price is set at your door: weighed items by their weight, counted items by how many there are.</p>
       </section>
     </div>
 
@@ -336,7 +336,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   function buildTypes(){
     var keep=selectedTypes();
     $("#types").innerHTML=TYPES.map(function(t){
-      return '<label class="type"><input type="checkbox" value="'+esc(t.name)+'"'+(keep.indexOf(t.name)>-1?" checked":"")+'><span>'+esc(t.name)+'<em>'+esc(t.note)+'</em></span></label>';
+      return '<label class="type"><input type="checkbox" value="'+esc(t.name)+'"'+(keep.indexOf(t.name)>-1?" checked":"")+'><span>'+esc(t.name)+'<em>'+esc(t.note)+(t.unit==="piece"?(t.note?" · ":"")+"price per piece":"")+'</em></span></label>';
     }).join("");
   }
   $("#types").addEventListener("change",function(){saveDraft()});
@@ -511,7 +511,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
       res.items.forEach(function(it){
         var r=requests.filter(function(x){return x.code===it.code})[0]; if(!r)return;
         var s=STEPS.indexOf(it.status);
-        r.cancelled=(it.status==="Cancelled");
+        r.cancelled=(it.status==="Cancelled"); r.notCollected=(it.status==="Not collected");
         if(s>-1)r.stage=s;
         r.confirmed=it.confirmed; r.collector=it.collector; r.collectorPhone=it.collectorPhone; r.phoneConfirmed=!!it.phoneConfirmed;
       });
@@ -526,6 +526,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     if(r.status==="queued")return '<span class="pill queued">Waiting to send</span>';
     if(r.status==="sending")return '<span class="pill queued">Sending…</span>';
     if(r.cancelled)return '<span class="pill cancel">Cancelled</span>';
+    if(r.notCollected)return '<span class="pill cancel">Not collected</span>';
     if(r.stage>=3)return '<span class="pill done">Completed</span>';
     return '<span class="pill live">'+STEPS[r.stage]+'</span>';
   }
@@ -536,8 +537,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     }
     el.innerHTML=requests.map(function(r){
       var open=openId===r.id, steps="";
-      if(r.status==="live"&&!r.cancelled){
+      if(r.status==="live"&&!r.cancelled&&!r.notCollected){
         steps='<ol class="steps">'+STEPS.map(function(s,i){return '<li class="'+(i<r.stage||(r.stage>=3&&i<=3)?"done":i===r.stage?"now":"")+'">'+s+'</li>'}).join("")+'</ol>';
+      }else if(r.notCollected){
+        steps='<p class="detail" style="margin-top:12px">We couldn’t collect this time. The office will contact you to arrange another visit.</p>';
       }else if(r.cancelled){
         steps='<p class="detail" style="margin-top:12px">This request was cancelled. Call the office if this is a mistake.</p>';
       }else{
@@ -572,7 +575,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     var when=ratesAt?new Date(ratesAt).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
     $("#ratesNote").textContent=(isOnline()&&ratesFresh)?"Up to date. Saved on this device for offline use.":(when?"Showing rates saved on "+when+".":"Sample rates. Connect to the internet to get today’s prices.");
     $("#rateList").innerHTML=TYPES.map(function(t){
-      return '<div class="rate"><div><b>'+esc(t.name)+'</b><small>'+esc(t.note)+'</small></div><div class="price">'+Number(t.rate).toFixed(2)+'<small> per kg</small></div></div>';
+      return '<div class="rate"><div><b>'+esc(t.name)+'</b><small>'+esc(t.note)+'</small></div><div class="price">'+Number(t.rate).toFixed(2)+'<small> per '+(t.unit==="piece"?"piece":"kg")+'</small></div></div>';
     }).join("");
   }
 
