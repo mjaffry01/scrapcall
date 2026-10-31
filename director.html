@@ -62,6 +62,11 @@
 .sec{margin:16px 0 6px;font-weight:700;font-size:15px}
 .cashlog{font-size:14px;color:var(--muted);margin:0;padding:0;list-style:none}
 .cashlog li{padding:6px 0;border-bottom:1px solid var(--line)}
+.sugrow{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);padding:10px 0}
+.sugmain{flex:1;min-width:220px}
+.sugbtns{display:flex;gap:8px}
+.sugbtns>*{min-height:42px;font-size:15px}
+.sugnote{font-size:13px;color:var(--muted);margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -127,9 +132,11 @@
           <option value="open">All open requests</option><option value="new">New requests only</option><option value="active">With collectors only</option>
         </select>
         <span class="muted" id="mapCount"></span>
+        <label class="check" style="min-height:0"><input type="checkbox" id="showRoutes" checked> Show collector routes</label>
       </div>
-      <div class="legend"><span><i class="p-new"></i>New</span><span><i class="p-assigned"></i>Assigned</span><span><i class="p-way"></i>On the way</span></div>
+      <div class="legend"><span><i class="p-new"></i>New</span><span><i class="p-assigned"></i>Assigned</span><span><i class="p-way"></i>On the way</span><span><i class="p-coll"></i>Collector on duty</span><span><i class="p-off"></i>Collector not reporting</span></div>
       <div id="bigMap" class="map-box tall"></div>
+      <div class="card" id="mapSug" hidden></div>
       <div class="card" id="mapNoPin" hidden></div>
     </section>
 
@@ -175,6 +182,8 @@
 
 <script src="leaflet.js"></script>
 <script src="map.js"></script>
+<script src="dispatch.js"></script>
+<script src="route.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
@@ -198,7 +207,7 @@
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
     refresh();
-    clearInterval(timer); timer=setInterval(function(){ if(!document.hidden&&navigator.onLine!==false) refresh(true); },60000);
+    var tick=0; clearInterval(timer); timer=setInterval(function(){ tick++; if(!document.hidden&&navigator.onLine!==false&&(view==="map"||tick%2===0)) refresh(true); },30000);
   }
 
   $("#loginBtn").addEventListener("click",doLogin);
@@ -218,8 +227,8 @@
   function refresh(silent){
     return Promise.all([call("d_requests"),call("d_collectors")]).then(function(r){
       if(!r[0].ok||!r[1].ok) throw new Error(r[0].error||r[1].error||"Error");
-      S.requests=r[0].requests; S.today=r[0].today; S.collectors=r[1].collectors; S.cash=r[1].cash;
-      renderAll();
+      S.requests=r[0].requests; S.today=r[0].today; S.now=r[0].now; S.collectors=r[1].collectors; S.cash=r[1].cash; S.fetchedAt=Date.now();
+      renderAll(); updateRoads();
     }).catch(function(e){ if(e.message!=="auth"&&!silent) SC.toast("Couldn’t load the latest data. Check your connection."); });
   }
   SC.watchConnection(function(on){ if(on&&token&&!$("#app").hidden){ refresh(true); if(view==="map") renderMap(true); } });
@@ -237,6 +246,84 @@
   $$(".dtab").forEach(function(b){ b.addEventListener("click",function(){ setView(b.dataset.v); }); });
 
   function renderAll(){ renderOverview(); renderRequests(); renderCollectors(); if(view==="map") renderMap(false); }
+
+  /* ---------- collector positions and dispatch suggestions ---------- */
+  function q3(v){ return Math.round(v*1000)/1000; }
+  // Collector positions are rounded to about 100 m so road tables and routes can be reused between refreshes
+  function dstate(){
+    var el=(Date.now()-(S.fetchedAt||Date.now()))/1000;
+    var nm=/^(\d+):(\d+)/.exec(S.now||"");
+    return {today:S.today,nowMin:nm?(+nm[1]*60+ +nm[2]+el/60):null,requests:S.requests,dist:S.dist||undefined,collectors:S.collectors.map(function(c){
+      var o={}; for(var k in c) o[k]=c[k];
+      o.rawLoc=c.loc;
+      o.loc=c.loc?{lat:q3(c.loc.lat),lng:q3(c.loc.lng),duty:c.loc.duty,acc:c.loc.acc,ageSec:c.loc.ageSec}:null;
+      o.locAge=c.loc?c.loc.ageSec+el:null; return o;
+    })};
+  }
+  function sug(){ return window.SCDispatch?SCDispatch.suggest(dstate()):{items:[],byCode:{}}; }
+  // the collector app doesn't share locations yet; until someone does, hide the on-duty parts
+  function tracking(){ return S.collectors.some(function(c){ return !!c.loc; }); }
+  function ago(sec){
+    if(sec==null) return "never";
+    var m=Math.round(sec/60); if(m<1) return "just now"; if(m<60) return m+" min ago";
+    var h=Math.round(m/60); return h<24?h+" h ago":Math.round(h/24)+" d ago";
+  }
+  function collStatus(c){
+    if(!c.loc) return {cls:"",text:"No location yet"};
+    var d=dstate().collectors.filter(function(x){return x.id===c.id;})[0];
+    if(window.SCDispatch&&SCDispatch.isFresh(d)) return {cls:"ok",text:"On duty · seen "+ago(d.locAge)};
+    if(c.loc.duty) return {cls:"warn",text:"Not reporting · last seen "+ago(d.locAge)};
+    return {cls:"",text:"Off duty · last seen "+ago(d.locAge)};
+  }
+  function onDutyCount(){ var d=dstate().collectors; return d.filter(function(c){return window.SCDispatch&&SCDispatch.isFresh(c);}).length; }
+  function sugRows(items,limit){
+    return items.slice(0,limit).map(function(it){
+      var r=it.req,b=it.best;
+      return '<div class="sugrow"><div class="sugmain"><b>'+esc(r.name)+'</b> <span class="muted">'+esc(r.code)+'</span>'+(it.noPin?' <span class="pill warn">no pin</span>':'')+
+        '<div class="rc-sub">'+esc(r.addr.slice(0,70))+' · '+esc(SC.day(r.confirmedInput?r.confirmedInput.slice(0,10):r.day))+', '+esc(it.when)+'</div>'+
+        '<div class="rc-sub">'+(b?'Send <b>'+esc(b.c.name)+'</b> — '+esc(it.reason):esc(it.reason))+'</div></div>'+
+        '<div class="sugbtns">'+(b?'<button class="primary" data-assign="'+esc(r.code)+'" data-coll="'+esc(b.c.id)+'">Assign '+esc(b.c.name.split(" ")[0])+'</button>':"")+
+        '<button class="secondary" data-open="'+esc(r.code)+'">Open</button></div></div>';
+    }).join("");
+  }
+  function sugBlock(sg,limit){
+    var n=sg.items.filter(function(i){return i.best;}).length;
+    return (n>1?'<div class="bar"><button class="secondary" data-assignall="1">Assign all '+n+' suggestions</button></div>':"")+sugRows(sg.items,limit)+
+      '<p class="sugnote">'+(S.dist&&S.dist.live?"Distances and times are by road, using OpenStreetMap routing. They don’t include live traffic.":"Distances are straight-line estimates because road routing isn’t available right now. Roads are usually 30–40% longer.")+
+      (tracking()?' Suggestions start from where each collector is now (or from their other pickups that day) and spread the work.':' Suggestions use each collector’s working hours and measure from their other pickups that day, and spread the work.')+'</p>';
+  }
+  var roadKey="";
+  function updateRoads(){
+    if(!window.SCRoute||navigator.onLine===false) return;
+    var pts=[];
+    dstate().collectors.forEach(function(c){ if(window.SCDispatch&&SCDispatch.isFresh(c)) pts.push([c.loc.lat,c.loc.lng]); });
+    S.requests.forEach(function(r){
+      var open=(r.status==="Received"&&!r.collectorId)||r.status==="Assigned"||r.status==="On the way";
+      if(open&&window.SCMap&&SCMap.valid(r.lat,r.lng)) pts.push([r.lat,r.lng]);
+    });
+    if(pts.length<2) return;
+    var k=pts.map(SCRoute.key).sort().join("|");
+    if(k===roadKey) return; roadKey=k;
+    SCRoute.matrix(pts).then(function(fn){ if(roadKey!==k) return; S.dist=fn; renderOverview(); if(view==="map") renderMap(false); });
+  }
+  function assignOne(code,cid){
+    return call("d_update_request",{code:code,collectorId:cid}).then(function(res){ if(!res.ok) throw new Error(res.error||"Couldn’t assign."); });
+  }
+  function bindSug(root,sg){
+    $$("[data-open]",root).forEach(function(b){ b.addEventListener("click",function(){ openRequest(b.dataset.open); }); });
+    $$("[data-assign]",root).forEach(function(b){ b.addEventListener("click",function(){
+      b.disabled=true;
+      assignOne(b.dataset.assign,b.dataset.coll).then(function(){ SC.toast("Assigned. Open the request to confirm the pickup time."); refresh(true); })
+        .catch(function(e){ b.disabled=false; if(e.message!=="auth") SC.toast(e.message||"Couldn’t assign. Check your connection."); });
+    }); });
+    var all=$("[data-assignall]",root);
+    if(all) all.addEventListener("click",function(){
+      var todo=sg.items.filter(function(i){return i.best;}); all.disabled=true;
+      todo.reduce(function(p,i){ return p.then(function(){ return assignOne(i.req.code,i.best.c.id); }); },Promise.resolve())
+        .then(function(){ SC.toast("Assigned "+todo.length+" requests. Open each one to confirm the time."); refresh(true); })
+        .catch(function(e){ all.disabled=false; if(e.message!=="auth") SC.toast(e.message||"Couldn’t assign all of them."); refresh(true); });
+    });
+  }
 
   /* ---------- overview ---------- */
   function stats(){
@@ -261,19 +348,19 @@
       statCard(o.phone,"Phone numbers to confirm","phone",true)+
       statCard(o.out,"Out with collectors","active",false)+
       statCard(o.done,"Completed today","done",false)+
+      (tracking()?'<div class="stat static"><div class="n">'+onDutyCount()+'/'+S.collectors.filter(function(c){return c.active;}).length+'</div><div class="l">collectors on duty</div></div>':"")+
       '<div class="stat static"><div class="n">'+SC.num(o.kg)+'</div><div class="l">kg collected today</div></div>'+
       '<div class="stat static"><div class="n">'+SC.money(o.paid)+'</div><div class="l">paid out today</div></div>';
     $$("#ovStats [data-go]").forEach(function(b){ b.addEventListener("click",function(){
       filter=b.dataset.go; query=""; $("#search").value=""; setView("requests"); renderRequests();
     }); });
-    var w=S.requests.filter(function(r){ return r.status==="Received"&&!r.collectorId; }).slice(0,6);
-    $("#ovWaiting").innerHTML=w.length?w.map(function(r){
-      return '<div class="bar" style="justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:8px"><div><b>'+esc(r.name)+'</b> <span class="muted">'+esc(r.code)+'</span><div class="rc-sub">'+esc(r.addr.slice(0,70))+' · '+esc(SC.day(r.day))+', '+esc(r.slot.toLowerCase())+'</div></div><button class="secondary" data-open="'+esc(r.code)+'">Open</button></div>';
-    }).join(""):'<div class="empty"><b>Nothing waiting</b>New customer requests will show up here.</div>';
-    $$("#ovWaiting [data-open]").forEach(function(b){ b.addEventListener("click",function(){ openRequest(b.dataset.open); }); });
+    var sg=sug();
+    $("#ovWaiting").innerHTML=sg.items.length?sugBlock(sg,6):'<div class="empty"><b>Nothing waiting</b>New customer requests will show up here with a suggested collector.</div>';
+    bindSug($("#ovWaiting"),sg);
+    var tr=tracking();
     $("#ovColl").innerHTML=S.collectors.length?
       '<table class="tbl"><thead><tr><th>Collector</th><th class="num">Open jobs</th><th class="num">Done today</th><th class="num">kg</th><th class="num">Paid</th><th class="num">Cash held</th></tr></thead><tbody>'+
-      S.collectors.map(function(c){ return '<tr><td>'+esc(c.name)+(c.active?"":' <span class="pill">off</span>')+'</td><td class="num">'+c.openJobs+'</td><td class="num">'+c.doneToday+'</td><td class="num">'+SC.num(c.kgToday)+'</td><td class="num">'+SC.money(c.paidToday)+'</td><td class="num">'+SC.money(c.cash.balance)+'</td></tr>'; }).join("")+'</tbody></table>'
+      S.collectors.map(function(c){ return '<tr><td>'+esc(c.name)+(c.active?"":' <span class="pill">off</span>')+(tr?' <span class="pill '+collStatus(c).cls+'">'+esc(collStatus(c).text)+'</span>':"")+'</td><td class="num">'+c.openJobs+'</td><td class="num">'+c.doneToday+'</td><td class="num">'+SC.num(c.kgToday)+'</td><td class="num">'+SC.money(c.paidToday)+'</td><td class="num">'+SC.money(c.cash.balance)+'</td></tr>'; }).join("")+'</tbody></table>'
       :'<div class="empty"><b>No collectors yet</b>Add your first collector in the Collectors tab.</div>';
   }
 
@@ -316,6 +403,15 @@
   $("#search").addEventListener("input",function(){ query=this.value.trim().toLowerCase(); renderRequests(); });
 
   /* ---------- one request: assign, confirm, update ---------- */
+  function suggestHtml(r){
+    if(r.status!=="Received"||r.collectorId) return "";
+    var it=sug().byCode[r.code]; if(!it) return "";
+    var notNow=it.excluded&&it.excluded.length&&window.SCDispatch?'<p class="detail"><b>Not available then:</b> '+esc(SCDispatch.whyNot(it.excluded,6))+'.</p>':"";
+    if(!it.alts.length) return '<p class="detail"><b>Suggestion:</b> '+esc(it.reason)+'</p>';
+    return '<div class="field"><div class="lbl">Suggested collectors for '+esc(it.when)+' <span class="hint">best first</span></div><div class="bar">'+it.alts.map(function(a,i){
+      return '<button type="button" class="secondary" data-pick="'+esc(a.c.id)+'">'+(i===0?"★ ":"")+esc(a.c.name.split(" ")[0])+' · '+esc(window.SCDispatch?SCDispatch.reason(a):"")+'</button>';
+    }).join("")+'</div>'+notNow+'</div>';
+  }
   function openRequest(code){
     var r=S.requests.filter(function(x){return x.code===code;})[0]; if(!r) return;
     var collOpts='<option value="">Not assigned</option>'+S.collectors.filter(function(c){return c.active||c.id===r.collectorId;}).map(function(c){
@@ -342,6 +438,7 @@
       '<div class="map-note" id="rPinNote"></div><button type="button" class="link-btn" id="rPinClear" hidden>Remove pin</button>'+
       '<div class="sec">Office</div>'+
       '<label class="check"><input type="checkbox" id="rPhone"'+(r.phoneOk?" checked":"")+'> Phone number confirmed</label>'+
+      suggestHtml(r)+
       '<div class="row field"><div><label for="rColl">Collector</label><select id="rColl">'+collOpts+'</select></div>'+
       '<div><label for="rStatus">Status</label><select id="rStatus">'+statusOpts+'</select></div></div>'+
       '<div class="field"><label for="rTime">Confirmed pickup time</label><input type="datetime-local" id="rTime" value="'+esc(r.confirmedInput)+'">'+
@@ -371,6 +468,9 @@
       if(window.SCMap) SCMap.offNote($("#rMap"),"The map needs an internet connection.");
     }
     pinUi();
+    $$("#dlg [data-pick]").forEach(function(b){ b.addEventListener("click",function(){
+      var sel=$("#rColl"); sel.value=b.dataset.pick; sel.dispatchEvent(new Event("change"));
+    }); });
     $("#rColl").addEventListener("change",function(){
       var st=$("#rStatus");
       if(this.value&&st.value==="Received") st.value="Assigned";
@@ -409,8 +509,39 @@
       return true;
     });
   }
+  var routeToken=0, palette=["#c2410c","#0e7490","#a21caf","#4d7c0f","#be123c","#1d4ed8"];
+  function drawRoutes(sg){
+    var tok=++routeToken;
+    if(!window.SCRoute||!big) return;
+    // the road from each collector to the pickup suggested for them
+    sg.items.slice(0,6).forEach(function(it){
+      if(!(it.best&&it.best.fromLive&&it.best.c.loc&&SCMap.valid(it.req.lat,it.req.lng))) return;
+      SCRoute.route([[it.best.c.loc.lat,it.best.c.loc.lng],[it.req.lat,it.req.lng]]).then(function(res){
+        if(tok!==routeToken||!big) return;
+        L.polyline(res.coords,{color:"#5b3fa8",weight:3,dashArray:"6 8",opacity:.85})
+          .bindTooltip("Suggested: "+it.best.c.name.split(" ")[0]+" to "+it.req.name+" · "+SCRoute.fmt(res.km,res.min,res.road)).addTo(bigLayer);
+      });
+    });
+    // each on-duty collector's planned road route through their open pickups
+    if(!$("#showRoutes").checked) return;
+    dstate().collectors.forEach(function(c,ci){
+      if(!(window.SCDispatch&&SCDispatch.isFresh(c))) return;
+      var stops=S.requests.filter(function(r){ return r.collectorId===c.id&&(r.status==="Assigned"||r.status==="On the way")&&SCMap.valid(r.lat,r.lng); })
+        .map(function(r){ return {id:r.code,lat:r.lat,lng:r.lng,time:r.confirmedInput||""}; });
+      if(!stops.length) return;
+      var start=[c.loc.lat,c.loc.lng], plan=SCRoute.plan(start,stops,S.dist||SCRoute.estimate);
+      SCRoute.route([start].concat(plan.order.map(function(x){ return [x.lat,x.lng]; }))).then(function(res){
+        if(tok!==routeToken||!big) return;
+        L.polyline(res.coords,{color:palette[ci%palette.length],weight:4,opacity:.8})
+          .bindTooltip(c.name.split(" ")[0]+": "+stops.length+" stop"+(stops.length===1?"":"s")+" · "+SCRoute.fmt(res.km,res.min,res.road)).addTo(bigLayer);
+      });
+    });
+  }
   function renderMap(refit){
-    var box=$("#bigMap"), rows=mapRows();
+    var box=$("#bigMap"), rows=mapRows(), sg=sug();
+    var sc=$("#mapSug"); sc.hidden=!sg.items.length;
+    sc.innerHTML=sg.items.length?'<h2>Suggested dispatch</h2>'+sugBlock(sg,8):"";
+    bindSug(sc,sg);
     var nopin=rows.filter(function(r){ return !(window.SCMap&&SCMap.valid(r.lat,r.lng)); });
     $("#mapCount").textContent=rows.length+" request"+(rows.length===1?"":"s")+" · "+(rows.length-nopin.length)+" on the map";
     var card=$("#mapNoPin");
@@ -435,15 +566,34 @@
       m.on("popupopen",function(e){ var b=e.popup.getElement().querySelector("[data-open]"); if(b) b.onclick=function(){ openRequest(r.code); }; });
       pts.push([r.lat,r.lng]);
     });
+    dstate().collectors.forEach(function(c){
+      if(!c.loc||c.loc.ageSec>12*3600) return;
+      var live=!!(window.SCDispatch&&SCDispatch.isFresh(c)), st=collStatus(c);
+      var m=L.marker([c.rawLoc.lat,c.rawLoc.lng],{icon:SCMap.pinIcon(c.name.split(" ")[0].slice(0,9),live?"p-coll":"p-off"),zIndexOffset:1000}).addTo(bigLayer);
+      m.bindPopup('<b>'+esc(c.name)+'</b><br>'+esc(st.text)+'<br>'+c.openJobs+' open pickup'+(c.openJobs===1?"":"s")+'<br><a href="'+esc(SC.telHref(c.phone))+'">Call '+esc(c.phone)+'</a>');
+      pts.push([c.rawLoc.lat,c.rawLoc.lng]);
+    });
+    drawRoutes(sg);
     if(refit&&pts.length) big.fitBounds(pts,{padding:[40,40],maxZoom:16});
   }
   $("#mapFilter").addEventListener("change",function(){ renderMap(true); });
+  $("#showRoutes").addEventListener("change",function(){ renderMap(false); });
 
   /* ---------- collectors ---------- */
+  function shiftText(c){
+    var sh=c.shift||{}, has=sh.start||sh.end||(sh.days&&sh.days.length);
+    if(!has) return "any time";
+    var days=(!sh.days||!sh.days.length||sh.days.length===7)?"every day":sh.days.join(", ");
+    return days+(sh.start?" · "+sh.start+"–"+sh.end:"");
+  }
+  var DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   function renderCollectors(){
+    var tr=tracking();
     $("#clist").innerHTML=S.collectors.length?S.collectors.map(function(c){
       return '<div class="ccard'+(c.active?"":" off")+'"><div class="rc-top"><b style="font-size:18px">'+esc(c.name)+'</b><span class="pill '+(c.active?"ok":"")+'">'+(c.active?"Active":"Off duty")+'</span></div>'+
         '<div class="rc-sub">'+esc(c.phone)+' · '+esc(c.id)+'</div>'+
+        (tr?'<div class="rc-tags"><span class="pill '+collStatus(c).cls+'">'+esc(collStatus(c).text)+'</span></div>':"")+
+        '<div class="rc-sub" style="margin-top:6px">Works: '+esc(shiftText(c))+'</div>'+
         '<div class="kv"><span>Open jobs</span><span>'+c.openJobs+'</span><span>Done today</span><span>'+c.doneToday+' · '+SC.num(c.kgToday)+' kg</span><span>Paid out today</span><span>'+SC.money(c.paidToday)+'</span><span>Cash held</span><span>'+SC.money(c.cash.balance)+'</span></div>'+
         '<div class="btns"><button class="secondary" data-edit="'+esc(c.id)+'">Edit</button><button class="secondary" data-cash="'+esc(c.id)+'">Cash</button></div></div>';
     }).join(""):'<div class="empty" style="grid-column:1/-1"><b>No collectors yet</b>Add a collector, then give them their phone number and PIN to sign in.</div>';
@@ -456,11 +606,20 @@
     var body='<div class="field"><label for="cName">Name</label><input type="text" id="cName" value="'+esc(c?c.name:"")+'"></div>'+
       '<div class="field"><label for="cPhone">Phone number <span class="hint">They sign in with this</span></label><input type="tel" id="cPhone" inputmode="tel" value="'+esc(c?c.phone:"")+'"></div>'+
       '<div class="field"><label for="cPin">'+(c?"New PIN":"PIN")+' <span class="hint">'+(c?"Leave blank to keep the current PIN. A new PIN signs them out of their phone.":"4 to 6 digits")+'</span></label><input type="password" id="cPin" inputmode="numeric" autocomplete="new-password" maxlength="6"></div>'+
+      '<div class="sec">Working hours <span class="hint">Used to suggest collectors who are working at the customer’s time. Leave the times blank if they can work any time.</span></div>'+
+      '<div class="row field"><div><label for="cFrom">From</label><input type="time" id="cFrom" value="'+esc(c&&c.shift?c.shift.start:"")+'"></div><div><label for="cTo">To</label><input type="time" id="cTo" value="'+esc(c&&c.shift?c.shift.end:"")+'"></div></div>'+
+      '<div class="lbl">Work days</div><div class="bar" id="cDays">'+DAYS.map(function(dn){
+        var on=!c||!c.shift||!c.shift.days||!c.shift.days.length||c.shift.days.indexOf(dn)>-1;
+        return '<label class="check" style="min-height:40px"><input type="checkbox" data-day="'+dn+'"'+(on?" checked":"")+'> '+dn+'</label>';
+      }).join("")+'</div>'+
       '<label class="check"><input type="checkbox" id="cActive"'+(!c||c.active?" checked":"")+'> Active (can sign in and receive jobs)</label>'+
       '<div class="err" id="cErr" role="alert"></div>';
     SC.dialog(c?"Edit collector":"Add collector",body,'<button class="primary" id="cSave" type="button">Save</button>');
     $("#cSave").addEventListener("click",function(){
-      var d={name:$("#cName").value,phone:$("#cPhone").value,pin:$("#cPin").value,active:$("#cActive").checked};
+      var days=$$("#cDays [data-day]").filter(function(x){return x.checked;}).map(function(x){return x.dataset.day;});
+      if(!days.length){ $("#cErr").textContent="Tick at least one work day."; return; }
+      var d={name:$("#cName").value,phone:$("#cPhone").value,pin:$("#cPin").value,active:$("#cActive").checked,
+             shiftStart:$("#cFrom").value,shiftEnd:$("#cTo").value,days:days.length===7?[]:days};
       if(c) d.id=c.id;
       var b=this; b.disabled=true; $("#cErr").textContent="";
       call("d_collector_save",d).then(function(res){
