@@ -83,6 +83,9 @@ body{background:var(--surface2)}
 .rcprice small{font-family:var(--body);font-size:11px;font-weight:400;color:var(--muted)}
 .rcrow input{min-height:42px;text-align:right}
 .rcamt{text-align:right;font-weight:600}
+.stepno{font-size:12.5px;color:var(--muted);font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin:0 0 4px}
+.bigchoice{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.bigchoice button{min-height:64px;font-size:18px}
 </style>
 </head>
 <body>
@@ -221,8 +224,9 @@ body{background:var(--surface2)}
         if(!j._ph[a.id]){ j._ph[a.id]=1; j.donePhotoCount=(j.donePhotoCount||0)+a.photos.length; }
         j.photosPending=true; return;
       }
+      if(a.type==="nocollect"){ j.status="Not collected"; j.pending=true; return; }
       if(a.type==="status"&&j.status==="Assigned") j.status="On the way";
-      if(a.type==="complete"&&j.status!=="Completed"){ j.status="Completed"; j.kg=a.est.kg; j.paid=a.est.amt; j.method=a.method; j.pending=true; j.details=a.est.lines; j.donePhotoCount=(a.photos||[]).length; }
+      if(a.type==="complete"&&j.status!=="Completed"){ j.status="Completed"; j.kg=a.est.kg; j.pieces=a.est.pcs||0; j.paid=a.est.amt; j.method=a.method; j.pending=true; j.details=a.est.lines; j.donePhotoCount=(a.photos||[]).length; }
       else if(a.type==="complete") j.pending=true;
     });
   }
@@ -246,7 +250,7 @@ body{background:var(--surface2)}
     function next(){
       if(!queue.length){ syncing=false; return Promise.resolve(); }
       var a=queue[0];
-      var req=a.type==="issue"?call("c_issue",{reason:a.reason,note:a.note}):a.type==="photos"?call("c_photos",{id:a.id,code:a.code,photos:a.photos}):a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note,photos:a.photos||[]});
+      var req=a.type==="nocollect"?call("c_nocollect",{code:a.code,reason:a.reason,note:a.note,photos:a.photos||[]}):a.type==="issue"?call("c_issue",{reason:a.reason,note:a.note}):a.type==="photos"?call("c_photos",{id:a.id,code:a.code,photos:a.photos}):a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note,photos:a.photos||[]});
       return req.then(function(res){
         if(!(res&&res.ok)) SC.toast((a.code||"Problem report")+": "+((res&&res.error)||"couldn’t be saved"));
         queue.shift(); SC.save(QK,queue); return next();
@@ -322,11 +326,11 @@ body{background:var(--surface2)}
   }
   function jobCard(j,n){
     var when=j.confirmed?("At "+j.confirmed):("Wants "+SC.day(j.day)+", "+(j.slot||"").toLowerCase());
-    var tag=j.pending?'<span class="pill warn">Waiting to send</span>':(j.status==="On the way"?'<span class="pill live">On the way</span>':j.status==="Completed"?'<span class="pill ok">Completed</span>':'<span class="pill warn">To do</span>');
+    var tag=j.pending?'<span class="pill warn">Waiting to send</span>':(j.status==="On the way"?'<span class="pill live">On the way</span>':j.status==="Completed"?'<span class="pill ok">Completed</span>':j.status==="Not collected"?'<span class="pill bad">Not collected</span>':'<span class="pill warn">To do</span>');
     return '<button class="job" data-code="'+esc(j.code)+'"><div class="j-top"><span class="code">'+(n?n+". ":"")+esc(j.code)+'</span>'+(n===1?'<span class="pill live">Next stop</span> ':"")+tag+'</div>'+
       '<div class="j-name">'+esc(j.name)+'</div><div class="j-sub">'+esc(j.addr.slice(0,90))+'</div>'+
       '<div class="j-sub">'+esc(when)+'</div><div class="j-sub">'+esc(j.types)+' — '+esc(j.qty)+'</div>'+legLine(j,n)+
-      (j.status==="Completed"?'<div class="j-sub"><b>'+SC.kg(j.kg)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')</div>':
+      (j.status==="Completed"?'<div class="j-sub"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')</div>':
        (j.phoneOk?"":'<div class="j-tags"><span class="pill warn">Office hasn’t confirmed this phone yet</span></div>'))+'</button>';
   }
   function render(){
@@ -334,12 +338,14 @@ body{background:var(--surface2)}
     var jobs=orderedJobs();
     $("#v-jobs").innerHTML=jobs.length?routeCard()+jobs.map(function(j,i){ return jobCard(j,validPin(j)&&plan&&plan.order.length?i+1:0); }).join(""):'<div class="empty"><b>No jobs right now</b>When the office gives you a pickup, it shows up here.</div>';
     var done=S.jobs.filter(function(j){return j.status==="Completed";});
-    var kg=done.reduce(function(s,j){return s+j.kg;},0), paid=done.reduce(function(s,j){return s+j.paid;},0);
+    var missed=S.jobs.filter(function(j){return j.status==="Not collected";});
+    var kg=done.reduce(function(s,j){return s+j.kg;},0), paid=done.reduce(function(s,j){return s+j.paid;},0), pcs=done.reduce(function(s,j){return s+(j.pieces||0);},0);
     var bal=SC.num((S.cash.balance||0)-pendingCash());
     $("#v-today").innerHTML=
       '<div class="cashcard"><div class="n">'+SC.money(bal)+'</div><div class="l">Cash you should be holding (cash from the office, minus cash paid to customers)</div></div>'+
-      '<div class="stats"><div class="stat"><div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat"><div class="n">'+SC.num(kg)+'</div><div class="l">kg collected</div></div><div class="stat"><div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
-      (done.length?'<h2>Done today</h2>'+done.map(function(j){ return jobCard(j); }).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>');
+      '<div class="stats"><div class="stat"><div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat"><div class="n">'+SC.num(kg)+'</div><div class="l">kg weighed'+(pcs?" · "+pcs+" pcs":"")+'</div></div><div class="stat"><div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
+      (done.length?'<h2>Done today</h2>'+done.map(function(j){ return jobCard(j); }).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>')+
+      (missed.length?'<h2>Could not collect</h2>'+missed.map(function(j){ return jobCard(j); }).join(""):"");
     $$("#app .job").forEach(function(b){ b.addEventListener("click",function(){ openJob(b.dataset.code); }); });
     if(tab==="map") renderMap(false);
     renderIssue();
@@ -396,20 +402,21 @@ body{background:var(--surface2)}
     var box=$("#v-rates");
     if(!S.rates||!S.rates.length){ box.innerHTML='<div class="empty"><b>No rate card saved yet</b>Connect to the internet once. The prices are then saved on this phone.</div>'; return; }
     var when=S.ratesAt?new Date(S.ratesAt).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
-    box.innerHTML='<h2>Rate card</h2><p class="hint" id="rcNote"></p><div class="card">'+S.rates.map(function(r,i){
-      return '<div class="rcrow"><div class="rcname"><b>'+esc(r.name)+'</b><small>'+esc(r.note||"")+'</small></div><div class="rcprice">'+SC.money(r.rate)+'<small> per kg</small></div>'+
-        '<input type="number" inputmode="decimal" min="0" step="0.01" placeholder="kg" aria-label="kg of '+esc(r.name)+'" data-rc="'+i+'"><div class="rcamt" data-rcamt="'+i+'">0.00</div></div>';
-    }).join("")+'</div><div class="total"><span>Quote total</span><span><span id="rcKg">0</span> kg · <span id="rcAmt">0.00</span></span></div>'+
+    box.innerHTML='<h2>Rate card</h2><p class="hint" id="rcNote"></p><p class="hint">Weighed items are priced per kg. Counted items (marked per piece) are priced by how many there are, with no weighing.</p><div class="card">'+S.rates.map(function(r,i){
+      return '<div class="rcrow"><div class="rcname"><b>'+esc(r.name)+'</b><small>'+esc(r.note||"")+'</small></div><div class="rcprice">'+SC.money(r.rate)+'<small> per '+(r.unit==="piece"?"piece":"kg")+'</small></div>'+
+        '<input type="number" inputmode="'+(r.unit==="piece"?"numeric":"decimal")+'" min="0" step="'+(r.unit==="piece"?"1":"0.01")+'" placeholder="'+(r.unit==="piece"?"qty":"kg")+'" aria-label="'+(r.unit==="piece"?"number of ":"kg of ")+esc(r.name)+'" data-rc="'+i+'"><div class="rcamt" data-rcamt="'+i+'">0.00</div></div>';
+    }).join("")+'</div><div class="total"><span>Quote total</span><span><span id="rcKg">0</span> kg · <span id="rcPcs">0</span> pcs · <span id="rcAmt">0.00</span></span></div>'+
       '<div class="btnrow"><button class="secondary" id="rcClear" type="button">Clear</button></div>'+
       '<p class="hint">A quick calculator for quoting at the door. The price that counts is saved when you complete the pickup.</p>';
     $("#rcNote").textContent=navigator.onLine===false?"Saved on this phone"+(when?" on "+when:"")+". Prices may have changed since.":"Price per kg, set by the office"+(when?". Updated "+when:"")+".";
     function calcRc(){
-      var kg=0,amt=0;
+      var kg=0,pcs=0,amt=0;
       $$("#v-rates input[data-rc]").forEach(function(i){
-        var r=S.rates[+i.dataset.rc], k=SC.num(i.value), a=SC.num(k*r.rate);
-        $('[data-rcamt="'+i.dataset.rc+'"]').textContent=SC.money(a); kg=SC.num(kg+k); amt=SC.num(amt+a);
+        var r=S.rates[+i.dataset.rc], piece=r.unit==="piece", k=piece?Math.floor(Number(i.value)||0):SC.num(i.value), a=SC.num(k*r.rate);
+        $('[data-rcamt="'+i.dataset.rc+'"]').textContent=SC.money(a); amt=SC.num(amt+a);
+        if(piece) pcs+=k; else kg=SC.num(kg+k);
       });
-      $("#rcKg").textContent=kg; $("#rcAmt").textContent=SC.money(amt);
+      $("#rcKg").textContent=kg; $("#rcPcs").textContent=pcs; $("#rcAmt").textContent=SC.money(amt);
     }
     $$("#v-rates input[data-rc]").forEach(function(i){ i.addEventListener("input",calcRc); });
     $("#rcClear").addEventListener("click",function(){ $$("#v-rates input[data-rc]").forEach(function(i){ i.value=""; }); calcRc(); });
@@ -571,12 +578,13 @@ body{background:var(--surface2)}
       (j.notes?'<p class="detail"><b>Customer notes:</b> '+esc(j.notes)+'</p>':"")+
       (photos?'<div class="photos detail">'+photos+'</div>':"")+
       (j.phoneOk?"":'<p class="detail"><b>The office hasn’t confirmed this customer’s phone number yet.</b></p>')+
-      (j.status==="Completed"?'<div class="sec">Collected</div><p class="detail"><b>'+SC.kg(j.kg)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')'+(j.pending?" · waiting to send":"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"")+
+      (j.status==="Completed"?'<div class="sec">Collected</div><p class="detail"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')'+(j.pending?" · waiting to send":"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"")+
+      (j.status==="Not collected"?'<div class="sec">Not collected</div><p class="detail">The office has been told and will decide what happens next.</p>':"")+
       (j.status==="Completed"?'<div class="sec">Photos</div><p class="detail">'+(j.donePhotoCount?j.donePhotoCount+" saved"+(j.photosPending||j.pending?" (some waiting to send)":""):"No photos yet")+'. You can add a photo of the scrap, the receipt or the handover.</p><div class="photos" id="aPhotos"></div>':"");
     var foot="";
     if(j.status==="Completed"&&(j.donePhotoCount||0)<8) foot+='<button class="primary" id="aSave" type="button" disabled>Save photos</button>';
     if(j.status==="Assigned") foot+='<button class="secondary" id="jWay" type="button">I’m on the way</button>';
-    if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="primary" id="jDone" type="button">Complete pickup</button>';
+    if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="primary" id="jDone" type="button">Collect the scrap</button>';
     SC.dialog(j.code,body,foot||null);
     if(validPin(j)&&mapOk()){
       jmap=SCMap.create($("#jMap"),{center:{lat:j.lat,lng:j.lng,zoom:16}});
@@ -601,44 +609,104 @@ body{background:var(--surface2)}
     var d=$("#jDone"); if(d) d.addEventListener("click",function(){ completeForm(j); });
   }
 
-  /* ---------- weigh and pay ---------- */
+  /* ---------- at the pickup: 1) is the scrap there?  2) photo  3) weigh and pay ---------- */
+  var NOCOL=[["absent","Customer not there"],["nothing","No scrap at the address"],["address","Wrong or unreachable address"],["refused","Customer cancelled or refused"],["other","Other reason"]];
   function completeForm(j){
     if(!S.rates.length){ SC.toast("The price list isn’t saved on this phone yet. Connect to the internet once."); return; }
-    var mine=(j.types||"").split(",").map(function(s){return s.trim();});
-    var rates=S.rates.slice().sort(function(a,b){ return (mine.indexOf(b.name)>-1)-(mine.indexOf(a.name)>-1); });
-    var rows=rates.map(function(r){
-      return '<div class="wrow'+(mine.indexOf(r.name)>-1?" mine":"")+'"><div class="wn">'+esc(r.name)+'<small>'+SC.money(r.rate)+' per kg'+(mine.indexOf(r.name)>-1?" · customer listed this":"")+'</small></div>'+
-        '<input type="number" inputmode="decimal" min="0" step="0.01" placeholder="kg" aria-label="kg of '+esc(r.name)+'" data-t="'+esc(r.name)+'" data-r="'+r.rate+'"><div class="wamt">0.00</div></div>';
-    }).join("");
-    var body='<p class="detail">Weigh each item and enter the kg. Prices come from the office rate list.</p>'+rows+
-      '<div class="total"><span>Total</span><span><span id="tKg">0</span> kg · <span id="tAmt">0.00</span></span></div>'+
-      '<div class="sec">Photos <span class="hint">Optional. A picture of the scrap on the scale helps if there is a question later.</span></div><div class="photos" id="jPhotos"></div>'+
+    stepScrap(j,{pics:[],noPhoto:false});
+  }
+  function finish(sent,msgOnline){
+    if(sent===false) return false;
+    SC.closeDialog();
+    if(sent!=="dropped") SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":msgOnline);
+    setTab("today"); return true;
+  }
+
+  // Step 1: is the scrap actually there?
+  function stepScrap(j,st){
+    var body='<p class="stepno">Step 1 of 3</p><h3>Is the scrap there?</h3>'+
+      '<p class="detail">The customer listed: <b>'+esc(j.types)+'</b> — '+esc(j.qty)+'</p>'+
+      '<div class="bigchoice"><button class="primary" id="s1Yes" type="button">Yes, the scrap is here</button>'+
+      '<button class="secondary" id="s1No" type="button">No, nothing to collect</button></div>';
+    SC.dialog("Pickup "+j.code,body,null);
+    $("#s1Yes").addEventListener("click",function(){ stepPhoto(j,st); });
+    $("#s1No").addEventListener("click",function(){ stepNothing(j,st); });
+  }
+
+  // Nothing to collect: say why, add a photo if useful, tell the office
+  function stepNothing(j,st){
+    var body='<p class="stepno">Nothing to collect</p><h3>What happened?</h3>'+
+      '<div class="field"><select id="nWhy" aria-label="Reason">'+NOCOL.map(function(r){ return '<option value="'+r[0]+'">'+esc(r[1])+'</option>'; }).join("")+'</select></div>'+
+      '<div class="field"><label for="nNote">Details <span class="hint">Optional</span></label><textarea id="nNote"></textarea></div>'+
+      '<div class="sec">Photo <span class="hint">Optional. A picture of the door or the place shows you were there.</span></div><div class="photos" id="nPhotos"></div>'+
+      '<p class="detail">The office is told straight away and will arrange another visit or cancel the request.</p>';
+    SC.dialog("Pickup "+j.code,body,'<button class="secondary" id="nBack" type="button">Back</button><button class="primary" id="nSend" type="button">Tell the office</button>');
+    var npics=[]; mountPhotos($("#nPhotos"),npics,4,function(){});
+    $("#nBack").addEventListener("click",function(){ stepScrap(j,st); });
+    $("#nSend").addEventListener("click",function(){
+      var why=$("#nWhy").value, label=NOCOL.filter(function(r){return r[0]===why;})[0][1];
+      if(!confirm("Tell the office that nothing was collected?\n"+label+".")) return;
+      finish(enqueue({id:uid(),type:"nocollect",code:j.code,reason:why,note:$("#nNote").value,photos:npics.slice(),label:label}),"The office has been told.");
+    });
+  }
+
+  // Step 2: photograph the scrap
+  function stepPhoto(j,st){
+    var body='<p class="stepno">Step 2 of 3</p><h3>Take a photo of the scrap</h3>'+
+      '<p class="detail">Show what you are collecting. It helps if there is a question later.</p><div class="photos" id="pPhotos"></div>'+
+      '<label class="check" style="margin-top:12px"><input type="checkbox" id="pNo"'+(st.noPhoto?" checked":"")+'> I can’t take a photo right now</label>';
+    SC.dialog("Pickup "+j.code,body,'<button class="secondary" id="pBack" type="button">Back</button><button class="primary" id="pNext" type="button" disabled>Next: weigh</button>');
+    function gate(){ $("#pNext").disabled=!(st.pics.length||st.noPhoto); }
+    mountPhotos($("#pPhotos"),st.pics,4,gate);
+    $("#pNo").addEventListener("change",function(){ st.noPhoto=this.checked; gate(); });
+    gate();
+    $("#pBack").addEventListener("click",function(){ stepScrap(j,st); });
+    $("#pNext").addEventListener("click",function(){ stepWeigh(j,st); });
+  }
+
+  // Step 3: weigh the items sold by weight, count the items sold by the piece, record how you paid
+  function stepWeigh(j,st){
+    var mine=(j.types||"").split(",").map(function(x){return x.trim();});
+    var listedFirst=function(x,y){ return (mine.indexOf(y.name)>-1)-(mine.indexOf(x.name)>-1); };
+    var weighed=S.rates.filter(function(r){ return r.unit!=="piece"; }).sort(listedFirst);
+    var counted=S.rates.filter(function(r){ return r.unit==="piece"; }).sort(listedFirst);
+    function row(r){
+      var piece=r.unit==="piece", listed=mine.indexOf(r.name)>-1;
+      return '<div class="wrow'+(listed?" mine":"")+'"><div class="wn">'+esc(r.name)+'<small>'+SC.money(r.rate)+(piece?" per piece":" per kg")+(listed?" · customer listed this":"")+'</small></div>'+
+        '<input type="number" inputmode="'+(piece?"numeric":"decimal")+'" min="0" step="'+(piece?"1":"0.01")+'" placeholder="'+(piece?"how many":"kg")+'" aria-label="'+(piece?"number of ":"kg of ")+esc(r.name)+'" data-t="'+esc(r.name)+'" data-r="'+r.rate+'" data-u="'+(piece?"piece":"kg")+'"><div class="wamt">0.00</div></div>';
+    }
+    var body='<p class="stepno">Step 3 of 3</p><h3>Weigh and count</h3>'+
+      '<p class="detail">Prices come from the office rate list. '+(st.pics.length?st.pics.length+" photo"+(st.pics.length===1?"":"s")+" attached.":"No photo attached.")+'</p>'+
+      (weighed.length?'<div class="sec">Weigh these <span class="hint">price per kg</span></div>'+weighed.map(row).join(""):"")+
+      (counted.length?'<div class="sec">Count these <span class="hint">price per piece, no weighing needed</span></div>'+counted.map(row).join(""):"")+
+      '<div class="total"><span>Total</span><span><span id="tKg">0</span> kg · <span id="tPcs">0</span> pcs · <span id="tAmt">0.00</span></span></div>'+
       '<div class="sec">How did you pay the customer?</div>'+
       '<div class="radio"><label><input type="radio" name="method" value="Cash" checked><span>Cash</span></label><label><input type="radio" name="method" value="Digital"><span>Digital</span></label></div>'+
       '<div class="field" style="margin-top:14px"><label for="jNote">Note <span class="hint">Optional</span></label><textarea id="jNote"></textarea></div>';
-    SC.dialog("Complete "+j.code,body,'<button class="primary" id="jSave" type="button" disabled>Save pickup</button>');
-    var cpics=[]; mountPhotos($("#jPhotos"),cpics,4,function(){});
+    SC.dialog("Pickup "+j.code,body,'<button class="secondary" id="wBack" type="button">Back</button><button class="primary" id="jSave" type="button" disabled>Save pickup</button>');
     function calc(){
-      var kg=0,amt=0,items=[],lines=[];
+      var kg=0,pcs=0,amt=0,items=[],lines=[];
       $$("#dlg input[data-t]").forEach(function(i){
-        var k=SC.num(i.value), r=Number(i.dataset.r), a=SC.num(k*r);
+        var piece=i.dataset.u==="piece", r=Number(i.dataset.r);
+        var v=piece?Math.floor(Number(i.value)||0):SC.num(i.value), a=SC.num(v*r);
         i.parentNode.querySelector(".wamt").textContent=SC.money(a);
-        if(k>0){ kg=SC.num(kg+k); amt=SC.num(amt+a); items.push({t:i.dataset.t,kg:k}); lines.push(i.dataset.t+" "+k+" kg x "+SC.money(r)+" = "+SC.money(a)); }
+        if(v>0){
+          amt=SC.num(amt+a);
+          if(piece){ pcs+=v; items.push({t:i.dataset.t,qty:v}); lines.push(i.dataset.t+" "+v+(v===1?" piece":" pieces")+" x "+SC.money(r)+" = "+SC.money(a)); }
+          else { kg=SC.num(kg+v); items.push({t:i.dataset.t,kg:v}); lines.push(i.dataset.t+" "+v+" kg x "+SC.money(r)+" = "+SC.money(a)); }
+        }
       });
-      $("#tKg").textContent=kg; $("#tAmt").textContent=SC.money(amt);
-      $("#jSave").disabled=!(kg>0);
-      return {kg:kg,amt:amt,items:items,lines:lines.join("\n")};
+      $("#tKg").textContent=kg; $("#tPcs").textContent=pcs; $("#tAmt").textContent=SC.money(amt);
+      $("#jSave").disabled=!(items.length>0);
+      return {kg:kg,pcs:pcs,amt:amt,items:items,lines:lines.join("\n")};
     }
     $$("#dlg input[data-t]").forEach(function(i){ i.addEventListener("input",calc); });
+    $("#wBack").addEventListener("click",function(){ stepPhoto(j,st); });
     $("#jSave").addEventListener("click",function(){
-      var c=calc(); if(!(c.kg>0)) return;
+      var c=calc(); if(!c.items.length) return;
       var method=$("#dlg input[name=method]:checked").value;
-      if(!confirm("Save this pickup?\n"+c.kg+" kg, total "+SC.money(c.amt)+", paid by "+method.toLowerCase()+"."+(cpics.length?"\n"+cpics.length+" photo"+(cpics.length===1?"":"s")+" attached.":""))) return;
-      var sent=enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:$("#jNote").value,photos:cpics.slice(),est:{kg:c.kg,amt:c.amt,lines:c.lines}});
-      if(sent===false) return;
-      SC.closeDialog();
-      if(sent!=="dropped") SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"Pickup saved.");
-      setTab("today");
+      if(!confirm("Save this pickup?\n"+SC.qty(c.kg,c.pcs)+", total "+SC.money(c.amt)+", paid by "+method.toLowerCase()+"."+(st.pics.length?"\n"+st.pics.length+" photo"+(st.pics.length===1?"":"s")+" attached.":""))) return;
+      finish(enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:$("#jNote").value,photos:st.pics.slice(),est:{kg:c.kg,pcs:c.pcs,amt:c.amt,lines:c.lines}}),"Pickup saved.");
     });
   }
 
