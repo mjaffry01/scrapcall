@@ -51,7 +51,7 @@
 .kv span:nth-child(even){text-align:right;font-weight:600}
 .ccard .btns{display:flex;gap:8px;margin-top:10px}
 .ccard .btns>*{flex:1;min-height:42px;font-size:15px}
-.rate-row{display:grid;grid-template-columns:2fr 2fr 100px 150px 70px 44px;gap:8px;align-items:center;margin-bottom:8px}
+.rate-row{display:grid;grid-template-columns:2fr 2fr 100px 150px 190px 70px 44px;gap:8px;align-items:center;margin-bottom:8px}
 .rate-row .del{min-height:44px;border:1.5px solid var(--line);background:var(--surface);border-radius:10px;cursor:pointer;font-size:18px}
 .rate-head{font-size:13px;color:var(--muted);font-weight:600}
 @media (max-width:640px){
@@ -73,6 +73,10 @@
 .alertcard>div:first-child{flex:1;min-width:220px}
 .reassign-row{border-bottom:1px solid var(--line);padding:10px 0}
 .reassign-row select{margin-top:8px}
+.iconpick{display:flex;gap:8px;align-items:center}
+.iconpick .itemico{width:44px;height:44px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--brand);flex:none}
+.iconpick .itemico .ico{width:28px;height:28px}
+.iconpick select{min-width:0}
 </style>
 </head>
 <body>
@@ -155,9 +159,9 @@
 
     <section class="view" id="v-rates" aria-label="Items and rates" hidden>
       <h1>Items and rates</h1>
-      <p class="lede">Customers choose from these items. For each one, choose whether collectors <b>weigh</b> it (price per kg) or <b>count</b> it (price per piece, like a TV or a fridge). Collectors are paid by these prices. Set an item to hidden to take it off the form without deleting it.</p>
+      <p class="lede">Customers choose from these items. For each one, choose whether collectors <b>weigh</b> it (price per kg) or <b>count</b> it (price per piece, like a TV or a fridge). Collectors are paid by these prices. Each item also has a <b>picture</b>, which collectors and customers see next to its name. “Automatic” picks one from the name. Set an item to hidden to take it off the form without deleting it.</p>
       <div class="card">
-        <div class="rate-row rate-head"><span>Item</span><span>Note</span><span>Price</span><span>Priced</span><span>Shown</span><span></span></div>
+        <div class="rate-row rate-head"><span>Item</span><span>Note</span><span>Price</span><span>Priced</span><span>Picture</span><span>Shown</span><span></span></div>
         <div id="rateRows"></div>
         <div class="bar" style="margin-top:12px">
           <button class="secondary" id="addRate" type="button">Add item</button>
@@ -192,6 +196,7 @@
 <script src="dispatch.js"></script>
 <script src="route.js"></script>
 <script src="config.js"></script>
+<script src="icons.js"></script>
 <script src="common.js"></script>
 <script>
 (function(){
@@ -825,15 +830,20 @@
 
   /* ---------- items and rates ---------- */
   function rateRow(r){
-    r=r||{name:"",note:"",rate:"",active:true,unit:"kg"};
+    r=r||{name:"",note:"",rate:"",active:true,unit:"kg",icon:""};
     var d=document.createElement("div"); d.className="rate-row";
     d.innerHTML='<input type="text" aria-label="Item name" placeholder="Item" value="'+esc(r.name)+'" data-k="name">'+
       '<input type="text" aria-label="Note" placeholder="Note" value="'+esc(r.note)+'" data-k="note">'+
       '<input type="number" aria-label="Price" inputmode="decimal" min="0" step="0.01" placeholder="0.00" value="'+esc(r.rate)+'" data-k="rate">'+
       '<select aria-label="Priced by" data-k="unit"><option value="kg"'+(r.unit==="piece"?"":" selected")+'>Per kg (weighed)</option><option value="piece"'+(r.unit==="piece"?" selected":"")+'>Per piece (counted)</option></select>'+
+      '<div class="iconpick"><span class="itemico" data-prev></span><select aria-label="Picture" data-k="icon"><option value="">Automatic</option>'+
+        (window.SCIcons?SCIcons.items.map(function(k){ return '<option value="'+k+'"'+(r.icon===k?" selected":"")+'>'+esc(SCIcons.labels[k])+'</option>'; }).join(""):"")+'</select></div>'+
       '<label class="check" style="margin:0"><input type="checkbox" data-k="active"'+(r.active?" checked":"")+' aria-label="Shown to customers"></label>'+
       '<button class="del" type="button" aria-label="Remove item">×</button>';
     d.querySelector(".del").addEventListener("click",function(){ d.remove(); });
+    // the little picture shows what collectors and customers will see
+    function prev(){ var sel=d.querySelector('[data-k="icon"]'), nm=d.querySelector('[data-k="name"]').value; d.querySelector("[data-prev]").innerHTML=window.SCIcons?SCIcons.item(nm,sel.value,28):""; }
+    d.querySelector('[data-k="icon"]').addEventListener("change",prev); d.querySelector('[data-k="name"]').addEventListener("input",prev); prev();
     return d;
   }
   function loadRates(){
@@ -848,7 +858,7 @@
   $("#saveRates").addEventListener("click",function(){
     var rates=$$("#rateRows .rate-row").map(function(row){
       var g=function(k){ return row.querySelector('[data-k="'+k+'"]'); };
-      return {name:g("name").value,note:g("note").value,rate:g("rate").value===""?0:g("rate").value,unit:g("unit").value,active:g("active").checked};
+      return {name:g("name").value,note:g("note").value,rate:g("rate").value===""?0:g("rate").value,unit:g("unit").value,icon:g("icon").value,active:g("active").checked};
     });
     var b=this; b.disabled=true; $("#rateErr").textContent="";
     call("d_rates_save",{rates:rates}).then(function(res){

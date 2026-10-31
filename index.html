@@ -137,6 +137,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
 .chip-btn{background:rgba(255,255,255,.16);color:inherit;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer;min-height:38px}
 .chip-btn:hover{background:rgba(255,255,255,.26)}
 .chip-btn[hidden],.conn[hidden]{display:none}
+.type span .ico,.rate b .ico{display:inline-block;vertical-align:-6px;margin-right:6px;width:24px;height:24px;color:var(--brand)}
+@media (prefers-color-scheme: dark){.type span .ico,.rate b .ico{color:var(--hi)}}
 </style>
 </head>
 <body>
@@ -255,6 +257,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   </main>
 </div>
 
+<script src="icons.js"></script>
 <script src="leaflet.js"></script>
 <script src="map.js"></script>
 <script src="config.js"></script>
@@ -336,7 +339,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
   function buildTypes(){
     var keep=selectedTypes();
     $("#types").innerHTML=TYPES.map(function(t){
-      return '<label class="type"><input type="checkbox" value="'+esc(t.name)+'"'+(keep.indexOf(t.name)>-1?" checked":"")+'><span>'+esc(t.name)+'<em>'+esc(t.note)+(t.unit==="piece"?(t.note?" · ":"")+"price per piece":"")+'</em></span></label>';
+      return '<label class="type"><input type="checkbox" value="'+esc(t.name)+'"'+(keep.indexOf(t.name)>-1?" checked":"")+'><span><b style="font-weight:600">'+(window.SCIcons?SCIcons.item(t.name,t.icon,24):"")+esc(t.name)+'</b><em>'+esc(t.note)+(t.unit==="piece"?(t.note?" · ":"")+"price per piece":"")+'</em></span></label>';
     }).join("");
   }
   $("#types").addEventListener("change",function(){saveDraft()});
@@ -575,7 +578,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--brand)}
     var when=ratesAt?new Date(ratesAt).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
     $("#ratesNote").textContent=(isOnline()&&ratesFresh)?"Up to date. Saved on this device for offline use.":(when?"Showing rates saved on "+when+".":"Sample rates. Connect to the internet to get today’s prices.");
     $("#rateList").innerHTML=TYPES.map(function(t){
-      return '<div class="rate"><div><b>'+esc(t.name)+'</b><small>'+esc(t.note)+'</small></div><div class="price">'+Number(t.rate).toFixed(2)+'<small> per '+(t.unit==="piece"?"piece":"kg")+'</small></div></div>';
+      return '<div class="rate"><div><b>'+(window.SCIcons?SCIcons.item(t.name,t.icon,24):"")+esc(t.name)+'</b><small>'+esc(t.note)+'</small></div><div class="price">'+Number(t.rate).toFixed(2)+'<small> per '+(t.unit==="piece"?"piece":"kg")+'</small></div></div>';
     }).join("");
   }
 

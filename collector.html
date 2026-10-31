@@ -86,12 +86,116 @@ body{background:var(--surface2)}
 .stepno{font-size:12.5px;color:var(--muted);font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin:0 0 4px}
 .bigchoice{display:flex;flex-direction:column;gap:10px;margin:14px 0}
 .bigchoice button{min-height:64px;font-size:18px}
+/* ---- picture-first look: big touch targets, one picture per thing ---- */
+.ico{display:block;flex:none}
+body{font-size:17px}
+#lphone,#lpin{font-size:24px;min-height:60px;letter-spacing:1px}
+.loginic{display:flex;justify-content:center;color:var(--brand);margin-bottom:6px}
+.loginic .ico{width:72px;height:72px}
+.seg button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:13px;padding:8px 4px 10px;min-height:70px}
+.seg .ico{width:32px;height:32px}
+.dutybtn{flex:1;display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer;position:relative;background:var(--surface2);border:2px solid var(--line);border-radius:16px;padding:8px 12px;min-height:66px}
+.dutybtn input{position:absolute;opacity:0;width:1px;height:1px}
+.dutyic{width:46px;height:46px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted);flex:none}
+.dutyic .ico{width:28px;height:28px}
+.dutybtn input:checked ~ .dutyic{background:var(--ok);color:#fff}
+.dutybtn:has(input:checked){border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--surface))}
+.dutybtn:has(input:focus-visible){outline:3px solid var(--hi);outline-offset:2px}
+.dutytx{display:flex;flex-direction:column;min-width:0}
+.dutytx b{font-size:18px}
+.dutytx small{font-size:12.5px;color:var(--muted)}
+.problembtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:86px;min-height:66px;border-radius:16px;border:2px solid var(--bad);background:transparent;color:var(--bad);font-weight:800;cursor:pointer;font-size:13px}
+.problembtn .ico{width:30px;height:30px}
+.jobrow{display:flex;gap:12px;align-items:flex-start}
+.jobmain{flex:1;min-width:0}
+.sbadge{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;color:#fff}
+.sbadge .ico{width:30px;height:30px;stroke-width:2.2}
+.s-todo,.s-wait{background:#b97800}.s-way{background:#1d6fd6}.s-done{background:#17795c}.s-bad{background:#b3261e}
+.j-line{display:flex;gap:6px;align-items:flex-start;font-size:15px;margin-top:3px}
+.j-line .ico{color:var(--muted);margin-top:2px}
+.iconrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.iconrow.big .itemico{width:54px;height:54px}
+.itemico{width:40px;height:40px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--brand);flex:none;font-weight:800;font-size:14px}
+.itemico .ico{width:26px;height:26px}
+.iconrow.big .itemico .ico{width:34px;height:34px}
+.itemico.bad{color:var(--bad);border-color:var(--bad)}
+@media (prefers-color-scheme: dark){.itemico{color:var(--hi)}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px;margin:10px 0}
+.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:94px;padding:10px 6px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-weight:700;font-size:14.5px;text-align:center;cursor:pointer;text-decoration:none;font-family:inherit}
+.tile .ico{width:40px;height:40px;color:var(--brand)}
+@media (prefers-color-scheme: dark){.tile .ico{color:var(--hi)}}
+.tile.call .ico{color:var(--ok)}
+.tile[aria-pressed="true"]{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 16%,var(--surface));box-shadow:inset 0 0 0 2px var(--brand)}
+.yesno{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.yesno button{min-height:112px;border-radius:18px;border:none;color:#fff;font-size:24px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-family:inherit}
+.yesno button small{font-size:13px;font-weight:600;opacity:.92}
+.yesno .ico{width:48px;height:48px;stroke-width:2.4}
+.btn-yes{background:#17795c}.btn-no{background:#b3261e}
+.fb{display:flex;gap:8px;align-items:center;justify-content:center;min-height:64px;border-radius:14px;font-weight:800;font-size:18px;border:2px solid transparent;cursor:pointer;font-family:inherit;padding:0 14px}
+.fb .ico{width:28px;height:28px}
+.fb.back{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.fb.go{background:var(--brand);color:var(--brand-ink)}
+.fb.yes{background:#17795c;color:#fff}.fb.no{background:#b3261e;color:#fff}.fb.way{background:#1d6fd6;color:#fff}
+.fb[disabled]{opacity:.4;cursor:not-allowed}
+.stepbar{display:flex;align-items:center;margin:2px 0 10px}
+.sb{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:2px solid var(--line);color:var(--muted);flex:none}
+.sb.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.sb.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.sbline{flex:1;height:4px;background:var(--line);border-radius:2px}
+.sbline.done{background:var(--ok)}
+.cf-row{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.cf-row .itemico{width:46px;height:46px}
+.cf-main{flex:1;min-width:0}
+.cf-main b{display:block}
+.cf-main .ico{display:inline-block;vertical-align:-2px;color:var(--muted)}
+.cf-amt{font-family:var(--head);font-size:26px;font-weight:700}
+.cf-line{text-align:center;color:var(--muted);margin:2px 0 6px}
+.bignum{font-family:var(--head);font-size:60px;font-weight:700;line-height:1;text-align:center;margin:10px 0 2px}
+.cf-warn{display:flex;gap:10px;align-items:center;background:color-mix(in srgb,var(--bad) 14%,var(--surface));border:2px solid var(--bad);border-radius:12px;padding:10px;font-weight:700;margin:10px 0}
+.cf-warn .ico{color:var(--bad);width:30px;height:30px}
+.nophoto{display:flex;gap:10px;align-items:center;margin-top:14px;padding:10px;border:2px dashed var(--line);border-radius:12px;font-weight:700;cursor:pointer}
+.nophoto input{width:24px;height:24px;accent-color:var(--brand);flex:none}
+.photobtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:14px;border:2px solid var(--brand);background:color-mix(in srgb,var(--brand) 10%,var(--surface));color:var(--brand);font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+.photobtn.big{width:136px;height:108px}.photobtn.big .ico{width:46px;height:46px}
+.photobtn.small{width:96px;height:108px;border-color:var(--line);background:var(--surface);color:var(--muted)}.photobtn.small .ico{width:32px;height:32px}
+@media (prefers-color-scheme: dark){.photobtn{color:var(--hi);border-color:var(--hi)}}
+.thumb{width:84px;height:84px}
+.wrow{display:grid;grid-template-columns:48px 1fr auto;grid-template-areas:"ico name name" "ctl ctl amt";gap:8px 10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.wrow .itemico{grid-area:ico}
+.wrow .wn{grid-area:name;min-width:0}
+.wrow .wctl{grid-area:ctl}
+.wrow .wamt{grid-area:amt;font-size:20px;min-width:72px}
+.wrow .itemico{width:48px;height:48px}
+.wn small{display:flex;gap:4px;align-items:center}
+.wn small .ico{width:14px;height:14px}
+.wctl{display:flex;gap:6px;align-items:center}
+.wrow input{width:116px;min-height:56px;font-size:24px;font-weight:800;text-align:center}
+.stepper{width:46px;height:54px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.stepper .ico{width:24px;height:24px;stroke-width:2.4}
+.secic{display:flex;gap:8px;align-items:center;font-size:17px}
+.paytile{flex:1;margin:0;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:10px;text-align:center;cursor:pointer;min-height:100px;display:flex;align-items:center;justify-content:center}
+.paytile span{display:flex;flex-direction:column;align-items:center;gap:6px}
+.paytile .ico{width:44px;height:44px;color:var(--brand)}
+.radio label.paytile:has(input:checked){border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface));box-shadow:inset 0 0 0 2px var(--ok)}
+.rcrow{grid-template-columns:48px 1fr auto;row-gap:6px}
+.rcrow .itemico{width:48px;height:48px}
+.rcinput{grid-column:2 / 4;display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.rcinput input{width:110px}
+.rcprice small{display:inline-flex;gap:3px;align-items:center}
+.rcprice small .ico{width:12px;height:12px}
+.cashcard .ico{float:right;width:38px;height:38px;opacity:.9}
+.stat .ico{width:28px;height:28px;color:var(--brand);margin-bottom:4px}
+@media (prefers-color-scheme: dark){.stat .ico{color:var(--hi)}}
+.issuein{display:flex;gap:10px;align-items:flex-start}
+.issuein .ico{color:var(--bad);width:32px;height:32px}
+.center{text-align:center}
 </style>
 </head>
 <body>
 
 <div class="login" id="login" hidden>
   <div class="card">
+    <div class="loginic" data-ic="truck" data-sz="72"></div>
     <div class="logo">ScrapCall</div>
     <p class="lede">Collector sign-in</p>
     <div class="field">
@@ -103,7 +207,7 @@ body{background:var(--surface2)}
       <input type="password" id="lpin" inputmode="numeric" autocomplete="current-password" maxlength="6">
       <div class="err" id="loginErr" role="alert"></div>
     </div>
-    <button class="primary block" id="loginBtn" type="button">Sign in</button>
+    <button class="fb go block" id="loginBtn" type="button" style="width:100%"><span data-ic="next" data-sz="28"></span><span>Sign in</span></button>
   </div>
 </div>
 
@@ -117,24 +221,23 @@ body{background:var(--surface2)}
   </header>
   <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Online</span><span id="qInfo" class="pill warn" style="margin-left:auto" hidden></span></div>
   <div class="duty" id="duty">
-    <!-- location sharing is switched off for now: remove "hidden" from the next two lines to bring back the On duty switch -->
-    <label class="switch" hidden><input type="checkbox" id="dutySw"><span class="track"></span><span>On duty</span></label>
-    <span class="muted" id="dutyNote" hidden>Off duty. Your location isn’t shared.</span>
-    <button class="link-btn" id="issueBtn" type="button">Problem? Tell the office</button>
+    <!-- location sharing is switched off for now: remove "hidden" from the next line to bring back the On duty switch -->
+    <label class="dutybtn" hidden><input type="checkbox" id="dutySw"><span class="dutyic" data-ic="power" data-sz="28"></span><span class="dutytx"><b>On duty</b><small id="dutyNote">Off duty. Your location isn’t shared.</small></span></label>
+    <button class="problembtn" id="issueBtn" type="button"><span data-ic="warning" data-sz="30"></span><span>Problem</span></button>
   </div>
   <div class="issuebar" id="issueBar" role="status" hidden></div>
   <div class="seg" role="tablist">
-    <button role="tab" id="tabJobs" aria-selected="true">My jobs</button>
-    <button role="tab" id="tabToday" aria-selected="false">Today</button>
-    <button role="tab" id="tabMap" aria-selected="false">Map</button>
-    <button role="tab" id="tabRates" aria-selected="false">Rates</button>
+    <button role="tab" id="tabJobs" aria-selected="true"><span data-ic="list" data-sz="32"></span><span>Jobs</span></button>
+    <button role="tab" id="tabToday" aria-selected="false"><span data-ic="today" data-sz="32"></span><span>Today</span></button>
+    <button role="tab" id="tabMap" aria-selected="false"><span data-ic="map" data-sz="32"></span><span>Map</span></button>
+    <button role="tab" id="tabRates" aria-selected="false"><span data-ic="tag" data-sz="32"></span><span>Rates</span></button>
   </div>
   <div class="content">
     <section id="v-jobs" aria-label="My jobs"></section>
     <section id="v-today" aria-label="Today" hidden></section>
     <section id="v-rates" aria-label="Rate card" hidden></section>
     <section id="v-map" aria-label="Map" hidden>
-      <div class="btnrow" style="margin-bottom:8px"><button class="secondary" id="meBtn" type="button">Show my location</button></div>
+      <div class="btnrow" style="margin-bottom:8px"><button class="fb back" id="meBtn" type="button"><span data-ic="pin" data-sz="28"></span><span>Show my location</span></button></div>
       <div id="jobMap" class="map-box tall"></div>
       <p class="map-note" id="mapNote"></p>
     </section>
@@ -148,6 +251,7 @@ body{background:var(--surface2)}
 <script src="map.js"></script>
 <script src="route.js"></script>
 <script src="config.js"></script>
+<script src="icons.js"></script>
 <script src="common.js"></script>
 <script>
 (function(){
@@ -156,6 +260,39 @@ body{background:var(--surface2)}
   var token=SC.load(TK,null);
   var S=SC.load(DK,{jobs:[],cash:{balance:0},rates:[],name:"",today:""});
   var queue=SC.load(QK,[]), tab="jobs", syncing=false, timer=null;
+
+  /* ---------- pictures ---------- */
+  function ic(n,sz){ return window.SCIcons?SCIcons.svg(n,sz||24):""; }
+  function rateOf(name){ return (S.rates||[]).filter(function(x){return x.name===name;})[0]; }
+  function itemIcon(name,sz){ var r=rateOf(name); return window.SCIcons?SCIcons.item(name,r&&r.icon,sz||28):""; }
+  function itemIcons(types){
+    var names=String(types||"").split(",").map(function(x){return x.trim();}).filter(Boolean);
+    return names.slice(0,6).map(function(n){ return '<span class="itemico" title="'+esc(n)+'">'+itemIcon(n,26)+'</span>'; }).join("")+
+      (names.length>6?'<span class="itemico">+'+(names.length-6)+'</span>':"");
+  }
+  function hydrate(root){ $$("[data-ic]",root).forEach(function(el){ el.innerHTML=ic(el.dataset.ic,+el.dataset.sz||24); }); }
+  function buzz(ok){ try{ if(navigator.vibrate) navigator.vibrate(ok?35:[60,40,60]); }catch(e){} }
+  // a row of big picture buttons for choosing one reason; a hidden <select> keeps the chosen value
+  function tileHtml(list,id){
+    return '<div class="tiles" id="'+id+'" role="group">'+list.map(function(r,i){
+      return '<button type="button" class="tile" data-v="'+r[0]+'" aria-pressed="'+(i===0)+'">'+ic(r[2],40)+'<span>'+esc(r[1])+'</span></button>';
+    }).join("")+'</div>';
+  }
+  function bindTiles(id,selId){
+    var box=$("#"+id), sel=$("#"+selId);
+    function paint(){ $$(".tile",box).forEach(function(t){ t.setAttribute("aria-pressed",t.dataset.v===sel.value?"true":"false"); }); }
+    $$(".tile",box).forEach(function(t){ t.addEventListener("click",function(){ sel.value=t.dataset.v; paint(); buzz(true); }); });
+    sel.addEventListener("change",paint); paint();
+  }
+  // "Is this right?" with a big green tick and a big red cross, shown before anything is saved or sent
+  function check(title,heading,rowsHtml,yesFn,noFn){
+    var body='<h3>'+heading+'</h3>'+rowsHtml+
+      '<div class="yesno"><button type="button" class="btn-no" id="cfNo">'+ic("cross",48)+'<span>No</span></button>'+
+      '<button type="button" class="btn-yes" id="cfYes">'+ic("check",48)+'<span>Yes</span></button></div>';
+    SC.dialog(title,body,null);
+    $("#cfYes").addEventListener("click",function(){ buzz(true); yesFn(); });
+    $("#cfNo").addEventListener("click",function(){ buzz(false); noFn(); });
+  }
 
   function mapOk(){ return !!(window.SCMap&&SCMap.ok()&&navigator.onLine!==false); }
   function validPin(j){ return !!(window.SCMap&&SCMap.valid(j.lat,j.lng)); }
@@ -326,12 +463,18 @@ body{background:var(--surface2)}
   }
   function jobCard(j,n){
     var when=j.confirmed?("At "+j.confirmed):("Wants "+SC.day(j.day)+", "+(j.slot||"").toLowerCase());
+    var cls=j.pending?"wait":j.status==="On the way"?"way":j.status==="Completed"?"done":j.status==="Not collected"?"bad":"todo";
+    var icon=cls==="wait"?"upload":cls==="way"?"truck":cls==="done"?"check":cls==="bad"?"cross":"list";
     var tag=j.pending?'<span class="pill warn">Waiting to send</span>':(j.status==="On the way"?'<span class="pill live">On the way</span>':j.status==="Completed"?'<span class="pill ok">Completed</span>':j.status==="Not collected"?'<span class="pill bad">Not collected</span>':'<span class="pill warn">To do</span>');
-    return '<button class="job" data-code="'+esc(j.code)+'"><div class="j-top"><span class="code">'+(n?n+". ":"")+esc(j.code)+'</span>'+(n===1?'<span class="pill live">Next stop</span> ':"")+tag+'</div>'+
-      '<div class="j-name">'+esc(j.name)+'</div><div class="j-sub">'+esc(j.addr.slice(0,90))+'</div>'+
-      '<div class="j-sub">'+esc(when)+'</div><div class="j-sub">'+esc(j.types)+' — '+esc(j.qty)+'</div>'+legLine(j,n)+
+    return '<button class="job" data-code="'+esc(j.code)+'"><div class="jobrow"><span class="sbadge s-'+cls+'">'+ic(icon,30)+'</span><div class="jobmain">'+
+      '<div class="j-top"><span class="code">'+(n?n+". ":"")+esc(j.code)+'</span>'+(n===1?'<span class="pill live">Next stop</span> ':"")+tag+'</div>'+
+      '<div class="j-name">'+esc(j.name)+'</div>'+
+      '<div class="j-line">'+ic("pin",18)+'<span>'+esc(j.addr.slice(0,90))+'</span></div>'+
+      '<div class="j-line">'+ic("clock",18)+'<span>'+esc(when)+'</span></div>'+
+      '<div class="iconrow">'+itemIcons(j.types)+'</div>'+
+      '<div class="j-sub">'+esc(j.types)+' — '+esc(j.qty)+'</div>'+legLine(j,n)+
       (j.status==="Completed"?'<div class="j-sub"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')</div>':
-       (j.phoneOk?"":'<div class="j-tags"><span class="pill warn">Office hasn’t confirmed this phone yet</span></div>'))+'</button>';
+       (j.phoneOk?"":'<div class="j-tags"><span class="pill warn">Office hasn’t confirmed this phone yet</span></div>'))+'</div></div></button>';
   }
   function render(){
     var q=$("#qInfo"); q.hidden=!queue.length; q.textContent=queue.length+" waiting to send";
@@ -342,8 +485,8 @@ body{background:var(--surface2)}
     var kg=done.reduce(function(s,j){return s+j.kg;},0), paid=done.reduce(function(s,j){return s+j.paid;},0), pcs=done.reduce(function(s,j){return s+(j.pieces||0);},0);
     var bal=SC.num((S.cash.balance||0)-pendingCash());
     $("#v-today").innerHTML=
-      '<div class="cashcard"><div class="n">'+SC.money(bal)+'</div><div class="l">Cash you should be holding (cash from the office, minus cash paid to customers)</div></div>'+
-      '<div class="stats"><div class="stat"><div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat"><div class="n">'+SC.num(kg)+'</div><div class="l">kg weighed'+(pcs?" · "+pcs+" pcs":"")+'</div></div><div class="stat"><div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
+      '<div class="cashcard">'+ic("cash",38)+'<div class="n">'+SC.money(bal)+'</div><div class="l">Cash you should be holding (cash from the office, minus cash paid to customers)</div></div>'+
+      '<div class="stats"><div class="stat">'+ic("check",28)+'<div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat">'+ic("scale",28)+'<div class="n">'+SC.num(kg)+'</div><div class="l">kg weighed'+(pcs?" · "+pcs+" pcs":"")+'</div></div><div class="stat">'+ic("cash",28)+'<div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
       (done.length?'<h2>Done today</h2>'+done.map(function(j){ return jobCard(j); }).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>')+
       (missed.length?'<h2>Could not collect</h2>'+missed.map(function(j){ return jobCard(j); }).join(""):"");
     $$("#app .job").forEach(function(b){ b.addEventListener("click",function(){ openJob(b.dataset.code); }); });
@@ -376,7 +519,7 @@ body{background:var(--surface2)}
   function mountPhotos(box,arr,max,onChange){
     function draw(){
       box.innerHTML=arr.map(function(p,i){ return '<div class="thumbwrap"><img class="thumb" alt="Photo '+(i+1)+'" src="'+p+'"><button type="button" aria-label="Remove photo '+(i+1)+'" data-rm="'+i+'">×</button></div>'; }).join("")+
-        (arr.length<max?'<button type="button" class="add-photo" data-cam>Take photo</button><button type="button" class="add-photo" data-gal>From gallery</button>':"")+
+        (arr.length<max?'<button type="button" class="photobtn big" data-cam>'+ic("camera",46)+'<span>Take photo</span></button><button type="button" class="photobtn small" data-gal>'+ic("gallery",32)+'<span>Gallery</span></button>':"")+
         '<input type="file" accept="image/*" capture="environment" hidden data-fc><input type="file" accept="image/*" multiple hidden data-fg>';
       $$("[data-rm]",box).forEach(function(b){ b.addEventListener("click",function(){ arr.splice(+b.dataset.rm,1); draw(); onChange(); }); });
       var fc=$("[data-fc]",box), fg=$("[data-fg]",box), cam=$("[data-cam]",box), gal=$("[data-gal]",box);
@@ -403,8 +546,8 @@ body{background:var(--surface2)}
     if(!S.rates||!S.rates.length){ box.innerHTML='<div class="empty"><b>No rate card saved yet</b>Connect to the internet once. The prices are then saved on this phone.</div>'; return; }
     var when=S.ratesAt?new Date(S.ratesAt).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
     box.innerHTML='<h2>Rate card</h2><p class="hint" id="rcNote"></p><p class="hint">Weighed items are priced per kg. Counted items (marked per piece) are priced by how many there are, with no weighing.</p><div class="card">'+S.rates.map(function(r,i){
-      return '<div class="rcrow"><div class="rcname"><b>'+esc(r.name)+'</b><small>'+esc(r.note||"")+'</small></div><div class="rcprice">'+SC.money(r.rate)+'<small> per '+(r.unit==="piece"?"piece":"kg")+'</small></div>'+
-        '<input type="number" inputmode="'+(r.unit==="piece"?"numeric":"decimal")+'" min="0" step="'+(r.unit==="piece"?"1":"0.01")+'" placeholder="'+(r.unit==="piece"?"qty":"kg")+'" aria-label="'+(r.unit==="piece"?"number of ":"kg of ")+esc(r.name)+'" data-rc="'+i+'"><div class="rcamt" data-rcamt="'+i+'">0.00</div></div>';
+      return '<div class="rcrow"><span class="itemico">'+itemIcon(r.name,30)+'</span><div class="rcname"><b>'+esc(r.name)+'</b><small>'+esc(r.note||"")+'</small></div><div class="rcprice">'+SC.money(r.rate)+'<small>'+ic(r.unit==="piece"?"count":"scale",12)+' per '+(r.unit==="piece"?"piece":"kg")+'</small></div><div class="rcinput">'+
+        '<input type="number" inputmode="'+(r.unit==="piece"?"numeric":"decimal")+'" min="0" step="'+(r.unit==="piece"?"1":"0.01")+'" placeholder="'+(r.unit==="piece"?"qty":"kg")+'" aria-label="'+(r.unit==="piece"?"number of ":"kg of ")+esc(r.name)+'" data-rc="'+i+'"><div class="rcamt" data-rcamt="'+i+'">0.00</div></div></div>';
     }).join("")+'</div><div class="total"><span>Quote total</span><span><span id="rcKg">0</span> kg · <span id="rcPcs">0</span> pcs · <span id="rcAmt">0.00</span></span></div>'+
       '<div class="btnrow"><button class="secondary" id="rcClear" type="button">Clear</button></div>'+
       '<p class="hint">A quick calculator for quoting at the door. The price that counts is saved when you complete the pickup.</p>';
@@ -423,28 +566,35 @@ body{background:var(--surface2)}
   }
 
   /* ---------- tell the office about a problem (vehicle broke down, unwell, ...) ---------- */
-  var ISSUES=[["vehicle","Vehicle broke down"],["unwell","Not well or an emergency"],["area","Can’t reach the area"],["other","Other problem"]];
+  var ISSUES=[["vehicle","Vehicle broke down","breakdown"],["unwell","Not well or an emergency","unwell"],["area","Can’t reach the area","roadblock"],["other","Other problem","other"]];
   function renderIssue(){
     var b=$("#issueBar"), u=S.unavailable;
     b.hidden=!u;
     if(!u){ $("#issueBtn").hidden=false; return; }
     $("#issueBtn").hidden=true;
-    b.innerHTML='<div><b>'+(u.pending?"Saved. It will be sent to the office when you’re online.":"The office knows.")+'</b>'+esc(u.reason)+
-      (u.pending?"":'<div class="hint">They will contact you and move your pickups to other collectors if needed. You’ll be marked available again when the office clears this.</div>')+'</div>';
+    b.innerHTML='<div class="issuein">'+ic("warning",32)+'<div><b>'+(u.pending?"Saved. It will be sent to the office when you’re online.":"The office knows.")+'</b>'+esc(u.reason)+
+      (u.pending?"":'<div class="hint">They will contact you and move your pickups to other collectors if needed. You’ll be marked available again when the office clears this.</div>')+'</div></div>';
   }
-  $("#issueBtn").addEventListener("click",function(){
-    var body='<p class="detail">The office is told straight away and can move your pickups to other collectors. They will stop suggesting you for new pickups until they clear this.</p>'+
-      '<div class="field"><label for="iWhy">What happened?</label><select id="iWhy">'+ISSUES.map(function(i){ return '<option value="'+i[0]+'">'+esc(i[1])+'</option>'; }).join("")+'</select></div>'+
+  function openProblem(pre){
+    var body='<p class="detail">The office is told straight away. Choose what happened.</p>'+tileHtml(ISSUES,"iTiles")+
+      '<select id="iWhy" hidden>'+ISSUES.map(function(i){ return '<option value="'+i[0]+'">'+esc(i[1])+'</option>'; }).join("")+'</select>'+
       '<div class="field"><label for="iNote">Details <span class="hint">Optional. Where are you? How long?</span></label><textarea id="iNote"></textarea></div>';
-    SC.dialog("Tell the office",body,'<button class="primary" id="iSend" type="button">Send to the office</button>');
+    SC.dialog("Tell the office",body,'<button class="fb no" id="iSend" type="button">'+ic("upload",28)+'<span>Send to the office</span></button>');
+    bindTiles("iTiles","iWhy");
+    if(pre){ $("#iWhy").value=pre.why; $("#iWhy").dispatchEvent(new Event("change")); $("#iNote").value=pre.note; }
     $("#iSend").addEventListener("click",function(){
-      var why=$("#iWhy").value, note=$("#iNote").value, label=ISSUES.filter(function(i){return i[0]===why;})[0][1]+(note.trim()?": "+note.trim():"");
-      if(!confirm("Tell the office: "+label+"?")) return;
-      enqueue({id:uid(),type:"issue",reason:why,note:note,label:label});
-      SC.closeDialog();
-      SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"The office has been told.");
+      var why=$("#iWhy").value, note=$("#iNote").value, row=ISSUES.filter(function(i){return i[0]===why;})[0];
+      var label=row[1]+(note.trim()?": "+note.trim():"");
+      check("Tell the office","Tell the office?",'<div class="cf-row"><span class="itemico bad">'+ic(row[2],32)+'</span><div class="cf-main"><b>'+esc(label)+'</b></div></div>',
+        function(){
+          enqueue({id:uid(),type:"issue",reason:why,note:note,label:label});
+          SC.closeDialog();
+          SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"The office has been told.");
+        },
+        function(){ openProblem({why:why,note:note}); });
     });
-  });
+  }
+  $("#issueBtn").addEventListener("click",function(){ openProblem(); });
 
   /* ---------- on duty: share your location with the office ---------- */
   var DUTY_K="scrapcall_collector_duty", CONSENT_K="scrapcall_collector_consent", OFF_K="scrapcall_collector_pending_off";
@@ -566,25 +716,29 @@ body{background:var(--surface2)}
     var j=findJob(code); if(!j) return;
     var wa=SC.waHref(j.phone);
     var photos=(j.photos||[]).map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
+    var tiles='<div class="tiles">'+
+      '<a class="tile call" href="'+esc(SC.telHref(j.phone))+'">'+ic("phone",40)+'<span>Call</span></a>'+
+      (wa?'<a class="tile" href="'+esc(wa)+'" target="_blank" rel="noopener">'+ic("chat",40)+'<span>WhatsApp</span></a>':"")+
+      (j.alt?'<a class="tile call" href="'+esc(SC.telHref(j.alt))+'">'+ic("phone",40)+'<span>Call other number</span></a>':"")+
+      '<a class="tile" href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">'+ic("navigate",40)+'<span>Directions</span></a>'+
+      '<a class="tile" href="'+esc(viewHref(j))+'" target="_blank" rel="noopener">'+ic("map",40)+'<span>View on map</span></a></div>';
     var body=
-      '<p class="j-name">'+esc(j.name)+'</p>'+
-      '<div class="btnrow"><a class="linkbtn" href="'+esc(SC.telHref(j.phone))+'">Call</a>'+(wa?'<a class="linkbtn" href="'+esc(wa)+'" target="_blank" rel="noopener">WhatsApp</a>':"")+
-      (j.alt?'<a class="linkbtn" href="'+esc(SC.telHref(j.alt))+'">Call other number</a>':"")+'</div>'+
-      '<p class="detail"><b>Address:</b> '+esc(j.addr)+'</p>'+
-      '<div class="btnrow"><a class="linkbtn" href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">Directions</a><a class="linkbtn" href="'+esc(viewHref(j))+'" target="_blank" rel="noopener">View on map</a></div>'+
+      '<p class="j-name">'+esc(j.name)+'</p>'+tiles+
+      '<div class="j-line">'+ic("pin",20)+'<span><b>Address:</b> '+esc(j.addr)+'</span></div>'+
       (validPin(j)&&mapOk()?'<div id="jMap" class="map-box small"></div>':"")+
-      '<p class="detail"><b>When:</b> '+esc(j.confirmed?j.confirmed:SC.day(j.day)+", "+(j.slot||"").toLowerCase()+" (not confirmed)")+'</p>'+
+      '<div class="j-line">'+ic("clock",20)+'<span><b>When:</b> '+esc(j.confirmed?j.confirmed:SC.day(j.day)+", "+(j.slot||"").toLowerCase()+" (not confirmed)")+'</span></div>'+
+      '<div class="iconrow big">'+itemIcons(j.types)+'</div>'+
       '<p class="detail"><b>Scrap:</b> '+esc(j.types)+' — '+esc(j.qty)+'</p>'+
       (j.notes?'<p class="detail"><b>Customer notes:</b> '+esc(j.notes)+'</p>':"")+
       (photos?'<div class="photos detail">'+photos+'</div>':"")+
       (j.phoneOk?"":'<p class="detail"><b>The office hasn’t confirmed this customer’s phone number yet.</b></p>')+
       (j.status==="Completed"?'<div class="sec">Collected</div><p class="detail"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')'+(j.pending?" · waiting to send":"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"")+
       (j.status==="Not collected"?'<div class="sec">Not collected</div><p class="detail">The office has been told and will decide what happens next.</p>':"")+
-      (j.status==="Completed"?'<div class="sec">Photos</div><p class="detail">'+(j.donePhotoCount?j.donePhotoCount+" saved"+(j.photosPending||j.pending?" (some waiting to send)":""):"No photos yet")+'. You can add a photo of the scrap, the receipt or the handover.</p><div class="photos" id="aPhotos"></div>':"");
+      (j.status==="Completed"?'<div class="sec secic">'+ic("camera",22)+' Photos</div><p class="detail">'+(j.donePhotoCount?j.donePhotoCount+" saved"+(j.photosPending||j.pending?" (some waiting to send)":""):"No photos yet")+'. You can add a photo of the scrap, the receipt or the handover.</p><div class="photos" id="aPhotos"></div>':"");
     var foot="";
-    if(j.status==="Completed"&&(j.donePhotoCount||0)<8) foot+='<button class="primary" id="aSave" type="button" disabled>Save photos</button>';
-    if(j.status==="Assigned") foot+='<button class="secondary" id="jWay" type="button">I’m on the way</button>';
-    if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="primary" id="jDone" type="button">Collect the scrap</button>';
+    if(j.status==="Completed"&&(j.donePhotoCount||0)<8) foot+='<button class="fb go" id="aSave" type="button" disabled>'+ic("upload",28)+'<span>Save photos</span></button>';
+    if(j.status==="Assigned") foot+='<button class="fb way" id="jWay" type="button">'+ic("truck",30)+'<span>I’m on the way</span></button>';
+    if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="fb yes" id="jDone" type="button">'+ic("paper",30)+'<span>Collect the scrap</span></button>';
     SC.dialog(j.code,body,foot||null);
     if(validPin(j)&&mapOk()){
       jmap=SCMap.create($("#jMap"),{center:{lat:j.lat,lng:j.lng,zoom:16}});
@@ -603,17 +757,25 @@ body{background:var(--surface2)}
       });
     }
     var w=$("#jWay"); if(w) w.addEventListener("click",function(){
-      enqueue({id:uid(),type:"status",code:j.code,status:"On the way"}); SC.closeDialog();
+      enqueue({id:uid(),type:"status",code:j.code,status:"On the way"}); buzz(true); SC.closeDialog();
       SC.toast(navigator.onLine===false?"Saved. It will be sent when you’re online.":"Marked as on the way.");
     });
     var d=$("#jDone"); if(d) d.addEventListener("click",function(){ completeForm(j); });
   }
 
   /* ---------- at the pickup: 1) is the scrap there?  2) photo  3) weigh and pay ---------- */
-  var NOCOL=[["absent","Customer not there"],["nothing","No scrap at the address"],["address","Wrong or unreachable address"],["refused","Customer cancelled or refused"],["other","Other reason"]];
+  var NOCOL=[["absent","Customer not there","absent"],["nothing","No scrap at the address","empty"],["address","Wrong or unreachable address","wrongplace"],["refused","Customer cancelled or refused","refused"],["other","Other reason","other"]];
+  function stepBar(n){
+    var names=["eye","camera","scale"], out='<div class="stepbar" aria-hidden="true">';
+    names.forEach(function(name,i){
+      var k=i+1, cls=k<n?"done":k===n?"on":"";
+      out+='<span class="sb '+cls+'">'+ic(k<n?"check":name,26)+'</span>'+(k<3?'<span class="sbline '+(k<n?"done":"")+'"></span>':"");
+    });
+    return out+'</div>';
+  }
   function completeForm(j){
     if(!S.rates.length){ SC.toast("The price list isn’t saved on this phone yet. Connect to the internet once."); return; }
-    stepScrap(j,{pics:[],noPhoto:false});
+    stepScrap(j,{pics:[],noPhoto:false,vals:{},method:"Cash",note:""});
   }
   function finish(sent,msgOnline){
     if(sent===false) return false;
@@ -624,38 +786,42 @@ body{background:var(--surface2)}
 
   // Step 1: is the scrap actually there?
   function stepScrap(j,st){
-    var body='<p class="stepno">Step 1 of 3</p><h3>Is the scrap there?</h3>'+
+    var body=stepBar(1)+'<p class="stepno">Step 1 of 3</p><h3>Is the scrap there?</h3>'+
+      '<div class="iconrow big">'+itemIcons(j.types)+'</div>'+
       '<p class="detail">The customer listed: <b>'+esc(j.types)+'</b> — '+esc(j.qty)+'</p>'+
-      '<div class="bigchoice"><button class="primary" id="s1Yes" type="button">Yes, the scrap is here</button>'+
-      '<button class="secondary" id="s1No" type="button">No, nothing to collect</button></div>';
+      '<div class="yesno"><button class="btn-no" id="s1No" type="button">'+ic("cross",48)+'<span>No</span><small>Nothing to collect</small></button>'+
+      '<button class="btn-yes" id="s1Yes" type="button">'+ic("check",48)+'<span>Yes</span><small>The scrap is here</small></button></div>';
     SC.dialog("Pickup "+j.code,body,null);
-    $("#s1Yes").addEventListener("click",function(){ stepPhoto(j,st); });
-    $("#s1No").addEventListener("click",function(){ stepNothing(j,st); });
+    $("#s1Yes").addEventListener("click",function(){ buzz(true); stepPhoto(j,st); });
+    $("#s1No").addEventListener("click",function(){ buzz(false); stepNothing(j,st); });
   }
 
-  // Nothing to collect: say why, add a photo if useful, tell the office
+  // Nothing to collect: choose why, add a photo if useful, tell the office
   function stepNothing(j,st){
-    var body='<p class="stepno">Nothing to collect</p><h3>What happened?</h3>'+
-      '<div class="field"><select id="nWhy" aria-label="Reason">'+NOCOL.map(function(r){ return '<option value="'+r[0]+'">'+esc(r[1])+'</option>'; }).join("")+'</select></div>'+
+    var body='<p class="stepno">Nothing to collect</p><h3>What happened?</h3>'+tileHtml(NOCOL,"nTiles")+
+      '<select id="nWhy" hidden>'+NOCOL.map(function(r){ return '<option value="'+r[0]+'">'+esc(r[1])+'</option>'; }).join("")+'</select>'+
       '<div class="field"><label for="nNote">Details <span class="hint">Optional</span></label><textarea id="nNote"></textarea></div>'+
-      '<div class="sec">Photo <span class="hint">Optional. A picture of the door or the place shows you were there.</span></div><div class="photos" id="nPhotos"></div>'+
-      '<p class="detail">The office is told straight away and will arrange another visit or cancel the request.</p>';
-    SC.dialog("Pickup "+j.code,body,'<button class="secondary" id="nBack" type="button">Back</button><button class="primary" id="nSend" type="button">Tell the office</button>');
+      '<div class="sec secic">'+ic("camera",22)+' Photo <span class="hint">Optional. A picture of the door or the place shows you were there.</span></div><div class="photos" id="nPhotos"></div>';
+    SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="nBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb no" id="nSend" type="button">'+ic("upload",28)+'<span>Tell the office</span></button>');
+    bindTiles("nTiles","nWhy");
     var npics=[]; mountPhotos($("#nPhotos"),npics,4,function(){});
     $("#nBack").addEventListener("click",function(){ stepScrap(j,st); });
     $("#nSend").addEventListener("click",function(){
-      var why=$("#nWhy").value, label=NOCOL.filter(function(r){return r[0]===why;})[0][1];
-      if(!confirm("Tell the office that nothing was collected?\n"+label+".")) return;
-      finish(enqueue({id:uid(),type:"nocollect",code:j.code,reason:why,note:$("#nNote").value,photos:npics.slice(),label:label}),"The office has been told.");
+      var why=$("#nWhy").value, note=$("#nNote").value, row=NOCOL.filter(function(r){return r[0]===why;})[0];
+      check("Pickup "+j.code,"Tell the office that nothing was collected?",
+        '<div class="cf-row"><span class="itemico bad">'+ic(row[2],32)+'</span><div class="cf-main"><b>'+esc(row[1])+'</b>'+(note.trim()?esc(note.trim()):"")+'</div></div>'+
+        '<div class="cf-row"><span class="itemico">'+ic(npics.length?"camera":"nocamera",28)+'</span><div class="cf-main">'+(npics.length?npics.length+" photo"+(npics.length===1?"":"s")+" attached.":"No photo.")+'</div></div>',
+        function(){ finish(enqueue({id:uid(),type:"nocollect",code:j.code,reason:why,note:note,photos:npics.slice(),label:row[1]}),"The office has been told."); },
+        function(){ stepNothing(j,st); });
     });
   }
 
   // Step 2: photograph the scrap
   function stepPhoto(j,st){
-    var body='<p class="stepno">Step 2 of 3</p><h3>Take a photo of the scrap</h3>'+
+    var body=stepBar(2)+'<p class="stepno">Step 2 of 3</p><h3>Take a photo of the scrap</h3>'+
       '<p class="detail">Show what you are collecting. It helps if there is a question later.</p><div class="photos" id="pPhotos"></div>'+
-      '<label class="check" style="margin-top:12px"><input type="checkbox" id="pNo"'+(st.noPhoto?" checked":"")+'> I can’t take a photo right now</label>';
-    SC.dialog("Pickup "+j.code,body,'<button class="secondary" id="pBack" type="button">Back</button><button class="primary" id="pNext" type="button" disabled>Next: weigh</button>');
+      '<label class="nophoto"><input type="checkbox" id="pNo"'+(st.noPhoto?" checked":"")+'>'+ic("nocamera",30)+'<span>I can’t take a photo right now</span></label>';
+    SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="pBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb go" id="pNext" type="button" disabled><span>Next: weigh</span>'+ic("next",28)+'</button>');
     function gate(){ $("#pNext").disabled=!(st.pics.length||st.noPhoto); }
     mountPhotos($("#pPhotos"),st.pics,4,gate);
     $("#pNo").addEventListener("change",function(){ st.noPhoto=this.checked; gate(); });
@@ -672,24 +838,29 @@ body{background:var(--surface2)}
     var counted=S.rates.filter(function(r){ return r.unit==="piece"; }).sort(listedFirst);
     function row(r){
       var piece=r.unit==="piece", listed=mine.indexOf(r.name)>-1;
-      return '<div class="wrow'+(listed?" mine":"")+'"><div class="wn">'+esc(r.name)+'<small>'+SC.money(r.rate)+(piece?" per piece":" per kg")+(listed?" · customer listed this":"")+'</small></div>'+
-        '<input type="number" inputmode="'+(piece?"numeric":"decimal")+'" min="0" step="'+(piece?"1":"0.01")+'" placeholder="'+(piece?"how many":"kg")+'" aria-label="'+(piece?"number of ":"kg of ")+esc(r.name)+'" data-t="'+esc(r.name)+'" data-r="'+r.rate+'" data-u="'+(piece?"piece":"kg")+'"><div class="wamt">0.00</div></div>';
+      return '<div class="wrow'+(listed?" mine":"")+'"><span class="itemico">'+itemIcon(r.name,30)+'</span>'+
+        '<div class="wn">'+esc(r.name)+'<small>'+ic(piece?"count":"scale",14)+' '+SC.money(r.rate)+(piece?" per piece":" per kg")+(listed?" · customer listed this":"")+'</small></div>'+
+        '<div class="wctl">'+(piece?'<button type="button" class="stepper" data-d="-1" aria-label="One less">'+ic("minus",24)+'</button>':"")+
+        '<input type="number" inputmode="'+(piece?"numeric":"decimal")+'" min="0" step="'+(piece?"1":"0.01")+'" placeholder="'+(piece?"how many":"kg")+'" aria-label="'+(piece?"number of ":"kg of ")+esc(r.name)+'" data-t="'+esc(r.name)+'" data-r="'+r.rate+'" data-u="'+(piece?"piece":"kg")+'">'+
+        (piece?'<button type="button" class="stepper" data-d="1" aria-label="One more">'+ic("plus",24)+'</button>':"")+'</div><div class="wamt">0.00</div></div>';
     }
-    var body='<p class="stepno">Step 3 of 3</p><h3>Weigh and count</h3>'+
+    var body=stepBar(3)+'<p class="stepno">Step 3 of 3</p><h3>Weigh and count</h3>'+
       '<p class="detail">Prices come from the office rate list. '+(st.pics.length?st.pics.length+" photo"+(st.pics.length===1?"":"s")+" attached.":"No photo attached.")+'</p>'+
-      (weighed.length?'<div class="sec">Weigh these <span class="hint">price per kg</span></div>'+weighed.map(row).join(""):"")+
-      (counted.length?'<div class="sec">Count these <span class="hint">price per piece, no weighing needed</span></div>'+counted.map(row).join(""):"")+
+      (weighed.length?'<div class="sec secic">'+ic("scale",24)+' Weigh these <span class="hint">price per kg</span></div>'+weighed.map(row).join(""):"")+
+      (counted.length?'<div class="sec secic">'+ic("count",24)+' Count these <span class="hint">price per piece, no weighing needed</span></div>'+counted.map(row).join(""):"")+
       '<div class="total"><span>Total</span><span><span id="tKg">0</span> kg · <span id="tPcs">0</span> pcs · <span id="tAmt">0.00</span></span></div>'+
-      '<div class="sec">How did you pay the customer?</div>'+
-      '<div class="radio"><label><input type="radio" name="method" value="Cash" checked><span>Cash</span></label><label><input type="radio" name="method" value="Digital"><span>Digital</span></label></div>'+
+      '<div class="sec secic">'+ic("cash",24)+' How did you pay the customer?</div>'+
+      '<div class="radio">'+
+      '<label class="paytile"><input type="radio" name="method" value="Cash"'+(st.method==="Cash"?" checked":"")+'><span>'+ic("cash",44)+'<b>Cash</b></span></label>'+
+      '<label class="paytile"><input type="radio" name="method" value="Digital"'+(st.method==="Digital"?" checked":"")+'><span>'+ic("digital",44)+'<b>Digital</b></span></label></div>'+
       '<div class="field" style="margin-top:14px"><label for="jNote">Note <span class="hint">Optional</span></label><textarea id="jNote"></textarea></div>';
-    SC.dialog("Pickup "+j.code,body,'<button class="secondary" id="wBack" type="button">Back</button><button class="primary" id="jSave" type="button" disabled>Save pickup</button>');
+    SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="wBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb yes" id="jSave" type="button" disabled>'+ic("check",30)+'<span>Save pickup</span></button>');
     function calc(){
       var kg=0,pcs=0,amt=0,items=[],lines=[];
       $$("#dlg input[data-t]").forEach(function(i){
         var piece=i.dataset.u==="piece", r=Number(i.dataset.r);
         var v=piece?Math.floor(Number(i.value)||0):SC.num(i.value), a=SC.num(v*r);
-        i.parentNode.querySelector(".wamt").textContent=SC.money(a);
+        i.closest(".wrow").querySelector(".wamt").textContent=SC.money(a);
         if(v>0){
           amt=SC.num(amt+a);
           if(piece){ pcs+=v; items.push({t:i.dataset.t,qty:v}); lines.push(i.dataset.t+" "+v+(v===1?" piece":" pieces")+" x "+SC.money(r)+" = "+SC.money(a)); }
@@ -700,18 +871,44 @@ body{background:var(--surface2)}
       $("#jSave").disabled=!(items.length>0);
       return {kg:kg,pcs:pcs,amt:amt,items:items,lines:lines.join("\n")};
     }
-    $$("#dlg input[data-t]").forEach(function(i){ i.addEventListener("input",calc); });
+    $$("#dlg input[data-t]").forEach(function(i){ i.addEventListener("input",calc); if(st.vals[i.dataset.t]!==undefined) i.value=st.vals[i.dataset.t]; });
+    $("#jNote").value=st.note||"";
+    $$("#dlg .stepper").forEach(function(b){ b.addEventListener("click",function(){
+      var inp=b.closest(".wrow").querySelector("input"), v=Math.max(0,Math.floor(Number(inp.value)||0)+Number(b.dataset.d));
+      inp.value=v?v:""; inp.dispatchEvent(new Event("input",{bubbles:true})); buzz(true);
+    }); });
+    calc();
     $("#wBack").addEventListener("click",function(){ stepPhoto(j,st); });
     $("#jSave").addEventListener("click",function(){
       var c=calc(); if(!c.items.length) return;
-      var method=$("#dlg input[name=method]:checked").value;
-      if(!confirm("Save this pickup?\n"+SC.qty(c.kg,c.pcs)+", total "+SC.money(c.amt)+", paid by "+method.toLowerCase()+"."+(st.pics.length?"\n"+st.pics.length+" photo"+(st.pics.length===1?"":"s")+" attached.":""))) return;
-      finish(enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:$("#jNote").value,photos:st.pics.slice(),est:{kg:c.kg,pcs:c.pcs,amt:c.amt,lines:c.lines}}),"Pickup saved.");
+      st.vals={}; $$("#dlg input[data-t]").forEach(function(i){ st.vals[i.dataset.t]=i.value; });
+      st.method=$("#dlg input[name=method]:checked").value; st.note=$("#jNote").value;
+      saveCheck(j,st,c);
     });
+  }
+
+  // The last look before saving: pictures, numbers and the total in big digits
+  function saveCheck(j,st,c){
+    var method=st.method;
+    var rows=c.items.map(function(it){
+      var r=rateOf(it.t)||{rate:0}, piece=it.qty!=null, amt=SC.num((piece?it.qty:it.kg)*r.rate);
+      return '<div class="cf-row"><span class="itemico">'+itemIcon(it.t,30)+'</span><div class="cf-main"><b>'+esc(it.t)+'</b>'+ic(piece?"count":"scale",16)+' '+(piece?it.qty+(it.qty===1?" piece":" pieces"):it.kg+" kg")+'</div><div class="cf-amt">'+SC.money(amt)+'</div></div>';
+    }).join("");
+    var big=c.items.some(function(it){ return (it.kg||0)>=300||(it.qty||0)>=50; });
+    var body=rows+
+      '<div class="bignum">'+SC.money(c.amt)+'</div>'+
+      '<p class="cf-line">'+esc(SC.qty(c.kg,c.pcs))+', total '+SC.money(c.amt)+', paid by '+esc(method.toLowerCase())+'.</p>'+
+      '<div class="cf-row"><span class="itemico">'+ic(method==="Cash"?"cash":"digital",30)+'</span><div class="cf-main"><b>'+esc(method)+'</b></div></div>'+
+      '<div class="cf-row"><span class="itemico">'+ic(st.pics.length?"camera":"nocamera",28)+'</span><div class="cf-main">'+(st.pics.length?st.pics.length+" photo"+(st.pics.length===1?"":"s")+" attached.":"No photo.")+'</div></div>'+
+      (big?'<div class="cf-warn">'+ic("warning",30)+'<span>Very big number. Check it again.</span></div>':"");
+    check("Pickup "+j.code,"Save this pickup?",body,
+      function(){ finish(enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:st.note,photos:st.pics.slice(),est:{kg:c.kg,pcs:c.pcs,amt:c.amt,lines:c.lines}}),"Pickup saved."); },
+      function(){ stepWeigh(j,st); });
   }
 
   /* ---------- go ---------- */
   SC.pwa("#installBtn");
+  hydrate(document);
   if(token) start(); else showLogin("");
 })();
 </script>
