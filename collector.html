@@ -318,7 +318,7 @@ body{font-size:17px}
   function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); if(typeof stopDuty==="function") stopDuty(); showLogin(msg); }
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
-    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v21";   // app version, to check a phone has the latest
+    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v22";   // app version, to check a phone has the latest
     render(); processQueue().then(refresh); resumeDuty(); resumePickup();
     clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
   }
@@ -362,6 +362,7 @@ body{font-size:17px}
   function applyQueue(){
     queue.forEach(function(a){
       if(a.type==="issue"){ S.unavailable={reason:a.label,pending:true}; return; }
+      if(a.type==="available"){ S.unavailable=null; return; }
       var j=S.jobs.filter(function(x){return x.code===a.code;})[0]; if(!j) return;
       if(a.type==="photos"){ // counted once per queued action, even if applyQueue runs again
         j._ph=j._ph||{};
@@ -394,7 +395,7 @@ body{font-size:17px}
     function next(){
       if(!queue.length){ syncing=false; return Promise.resolve(); }
       var a=queue[0];
-      var req=a.type==="nocollect"?call("c_nocollect",{code:a.code,reason:a.reason,note:a.note,photos:a.photos||[]}):a.type==="issue"?call("c_issue",{reason:a.reason,note:a.note}):a.type==="photos"?call("c_photos",{id:a.id,code:a.code,photos:a.photos}):a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note,photos:a.photos||[]});
+      var req=a.type==="available"?call("c_available",{}):a.type==="nocollect"?call("c_nocollect",{code:a.code,reason:a.reason,note:a.note,photos:a.photos||[]}):a.type==="issue"?call("c_issue",{reason:a.reason,note:a.note}):a.type==="photos"?call("c_photos",{id:a.id,code:a.code,photos:a.photos}):a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note,photos:a.photos||[]});
       return req.then(function(res){
         if(!(res&&res.ok)) SC.toast((a.code||"Problem report")+": "+((res&&res.error)||"couldn’t be saved"));
         queue.shift(); SC.save(QK,queue); return next();
@@ -619,7 +620,18 @@ body{font-size:17px}
     if(!u){ $("#issueBtn").hidden=false; return; }
     $("#issueBtn").hidden=true;
     b.innerHTML='<div class="issuein">'+ic("warning",32)+'<div><b>'+(u.pending?"Saved. It will be sent to the office when you’re online.":"The office knows.")+'</b>'+esc(u.reason)+
-      (u.pending?"":'<div class="hint">They will contact you and move your pickups to other collectors if needed. You’ll be marked available again when the office clears this.</div>')+'</div></div>';
+      (u.pending?"":'<div class="hint">They will contact you and move your pickups to other collectors if needed.</div>')+'</div></div>'+
+      '<button type="button" class="fb yes" id="fineBtn">'+ic("check",28)+'<span>I’m fine again</span></button>';
+    $("#fineBtn").addEventListener("click",function(){
+      check("Back to work","Are you fine again and ready for pickups?",
+        '<div class="cf-row"><span class="itemico">'+ic("check",32)+'</span><div class="cf-main"><b>The office will see you are available.</b>New pickups can be given to you again.</div></div>',
+        function(){
+          enqueue({id:uid(),type:"available"});
+          SC.closeDialog();
+          SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"The office knows you are back.");
+        },
+        function(){ SC.closeDialog(); });
+    });
   }
   function openProblem(pre){
     var body='<p class="detail">The office is told straight away. Choose what happened.</p>'+tileHtml(ISSUES,"iTiles")+
