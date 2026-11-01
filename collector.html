@@ -57,15 +57,7 @@ body{background:var(--surface2)}
 .radio label:has(input:checked){border-color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,var(--surface))}
 .radio label:has(input:focus-visible){outline:3px solid var(--hi);outline-offset:2px}
 .duty{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
-.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;position:relative;min-height:44px}
-.switch input{position:absolute;opacity:0;width:1px;height:1px}
-.track{width:48px;height:28px;border-radius:14px;background:var(--line);position:relative;display:inline-block;flex:none}
-.track::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:left .15s}
-.switch input:checked + .track{background:var(--ok)}
-.switch input:checked + .track::after{left:23px}
-.switch input:focus-visible + .track{outline:3px solid var(--hi);outline-offset:2px}
 #dutyNote{font-size:14px;flex:1;min-width:200px}
-@media (prefers-reduced-motion:reduce){.track::after{transition:none}}
 .routecard{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface);border:1px solid var(--brand);border-radius:14px;padding:14px;margin-bottom:12px}
 .routecard>div{flex:1;min-width:200px}
 .routecard .primary{min-height:46px;flex:none}
@@ -75,7 +67,6 @@ body{background:var(--surface2)}
 .thumb{width:72px;height:72px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
 .thumbwrap{position:relative}
 .thumbwrap button{position:absolute;top:-6px;right:-6px;width:26px;height:26px;border-radius:50%;border:none;background:var(--ink);color:var(--surface);cursor:pointer;font-size:15px;line-height:1}
-.add-photo{width:84px;height:72px;border:1.5px dashed var(--muted);border-radius:10px;background:transparent;cursor:pointer;color:var(--muted);font-size:13px;font-weight:700}
 .rcrow{display:grid;grid-template-columns:1fr auto 84px 66px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
 .rcrow:last-child{border-bottom:none}
 .rcname small{display:block;color:var(--muted);font-size:12px;font-weight:400}
@@ -84,8 +75,6 @@ body{background:var(--surface2)}
 .rcrow input{min-height:42px;text-align:right}
 .rcamt{text-align:right;font-weight:600}
 .stepno{font-size:12.5px;color:var(--muted);font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin:0 0 4px}
-.bigchoice{display:flex;flex-direction:column;gap:10px;margin:14px 0}
-.bigchoice button{min-height:64px;font-size:18px}
 /* ---- picture-first look: big touch targets, one picture per thing ---- */
 .ico{display:block;flex:none}
 body{font-size:17px}
@@ -113,6 +102,7 @@ body{font-size:17px}
 .s-todo,.s-wait{background:#b97800}.s-way{background:#1d6fd6}.s-done{background:#17795c}.s-bad{background:#b3261e}
 .j-line{display:flex;gap:6px;align-items:flex-start;font-size:15px;margin-top:3px}
 .j-line .ico{color:var(--muted);margin-top:2px}
+.j-line .slotic{color:#d08a00}
 .iconrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .iconrow.big .itemico{width:54px;height:54px}
 .itemico{width:40px;height:40px;border-radius:12px;background:var(--surface2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--brand);flex:none;font-weight:800;font-size:14px}
@@ -197,25 +187,44 @@ body{font-size:17px}
 .shutter{width:88px;height:88px;border-radius:50%;border:6px solid #fff;background:#17795c;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
 .shutter .ico{width:40px;height:40px}
 .camwait{position:absolute;top:40%;left:0;right:0;text-align:center;color:#fff;font-weight:700}
+/* languages and reading aloud */
+.langrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.langbtn{min-height:58px;border-radius:14px;border:2px solid var(--line);background:var(--surface2);color:var(--ink);font-size:19px;font-weight:800;cursor:pointer;font-family:inherit}
+.langbtn[aria-pressed="true"]{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 16%,var(--surface));box-shadow:inset 0 0 0 2px var(--brand)}
+.langbig{display:flex;flex-direction:column;gap:12px;margin:10px 0}
+.langbig .langbtn{min-height:76px;font-size:26px}
+.chip-btn .ico{display:inline-block;vertical-align:-4px;width:18px;height:18px}
+.sayhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sayhead h3{margin:0}
+.say{flex:none;width:48px;height:48px;border-radius:50%;border:2px solid var(--brand);background:var(--surface);color:var(--brand);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.say .ico{width:26px;height:26px}
+@media (prefers-color-scheme: dark){.say{color:var(--hi);border-color:var(--hi)}}
+/* big full-screen answer after each action: green tick or red cross */
+.fbov{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:rgba(0,0,0,.72);color:#fff;text-align:center;font-size:24px;font-weight:800}
+.fbov .disc{width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.fbov .disc .ico{width:96px;height:96px;stroke-width:2.6}
+.fbov.ok .disc{background:#17795c}.fbov.bad .disc{background:#b3261e}
+.fbov small{font-size:16px;font-weight:600;opacity:.9;max-width:340px}
 </style>
 </head>
 <body>
 
 <div class="login" id="login" hidden>
   <div class="card">
+    <div class="langrow" id="loginLangs"></div>
     <div class="loginic" data-ic="truck" data-sz="72"></div>
     <div class="logo">ScrapCall</div>
-    <p class="lede">Collector sign-in</p>
+    <p class="lede" data-t="signin_title">Collector sign-in</p>
     <div class="field">
-      <label for="lphone">Phone number</label>
+      <label for="lphone" data-t="phone">Phone number</label>
       <input type="tel" id="lphone" inputmode="tel" autocomplete="tel">
     </div>
     <div class="field">
-      <label for="lpin">PIN</label>
+      <label for="lpin" data-t="pin">PIN</label>
       <input type="password" id="lpin" inputmode="numeric" autocomplete="current-password" maxlength="6">
       <div class="err" id="loginErr" role="alert"></div>
     </div>
-    <button class="fb go block" id="loginBtn" type="button" style="width:100%"><span data-ic="next" data-sz="28"></span><span>Sign in</span></button>
+    <button class="fb go block" id="loginBtn" type="button" style="width:100%"><span data-ic="next" data-sz="28"></span><span data-t="signin">Sign in</span></button>
   </div>
 </div>
 
@@ -223,28 +232,30 @@ body{font-size:17px}
   <header class="top">
     <div class="logo">ScrapCall<small id="hello">Collector</small></div>
     <div class="top-actions">
-      <button class="chip-btn" id="installBtn" type="button" hidden>Install app</button>
-      <button class="chip-btn" id="signOut" type="button">Sign out</button>
+      <button class="chip-btn" id="langBtn" type="button"><span data-ic="globe" data-sz="18"></span> <span id="langName"></span></button>
+      <button class="chip-btn" id="voiceBtn" type="button"></button>
+      <button class="chip-btn" id="installBtn" type="button" hidden data-t="install">Install app</button>
+      <button class="chip-btn" id="signOut" type="button" data-t="signout">Sign out</button>
     </div>
   </header>
   <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Online</span><span id="qInfo" class="pill warn" style="margin-left:auto" hidden></span></div>
   <div class="duty" id="duty">
-    <label class="dutybtn"><input type="checkbox" id="dutySw"><span class="dutyic" data-ic="power" data-sz="28"></span><span class="dutytx"><b>On duty</b><small id="dutyNote">Off duty. Your location isn’t shared.</small></span></label>
-    <button class="problembtn" id="issueBtn" type="button"><span data-ic="warning" data-sz="30"></span><span>Problem</span></button>
+    <label class="dutybtn"><input type="checkbox" id="dutySw"><span class="dutyic" data-ic="power" data-sz="28"></span><span class="dutytx"><b data-t="on_duty">On duty</b><small id="dutyNote">Off duty. Your location isn’t shared.</small></span></label>
+    <button class="problembtn" id="issueBtn" type="button"><span data-ic="warning" data-sz="30"></span><span data-t="problem">Problem</span></button>
   </div>
   <div class="issuebar" id="issueBar" role="status" hidden></div>
   <div class="seg" role="tablist">
-    <button role="tab" id="tabJobs" aria-selected="true"><span data-ic="list" data-sz="32"></span><span>Jobs</span></button>
-    <button role="tab" id="tabToday" aria-selected="false"><span data-ic="today" data-sz="32"></span><span>Today</span></button>
-    <button role="tab" id="tabMap" aria-selected="false"><span data-ic="map" data-sz="32"></span><span>Map</span></button>
-    <button role="tab" id="tabRates" aria-selected="false"><span data-ic="tag" data-sz="32"></span><span>Rates</span></button>
+    <button role="tab" id="tabJobs" aria-selected="true"><span data-ic="list" data-sz="32"></span><span data-t="tab_jobs">Jobs</span></button>
+    <button role="tab" id="tabToday" aria-selected="false"><span data-ic="today" data-sz="32"></span><span data-t="tab_today">Today</span></button>
+    <button role="tab" id="tabMap" aria-selected="false"><span data-ic="map" data-sz="32"></span><span data-t="tab_map">Map</span></button>
+    <button role="tab" id="tabRates" aria-selected="false"><span data-ic="tag" data-sz="32"></span><span data-t="tab_rates">Rates</span></button>
   </div>
   <div class="content">
     <section id="v-jobs" aria-label="My jobs"></section>
     <section id="v-today" aria-label="Today" hidden></section>
     <section id="v-rates" aria-label="Rate card" hidden></section>
     <section id="v-map" aria-label="Map" hidden>
-      <div class="btnrow" style="margin-bottom:8px"><button class="fb back" id="meBtn" type="button"><span data-ic="pin" data-sz="28"></span><span>Show my location</span></button></div>
+      <div class="btnrow" style="margin-bottom:8px"><button class="fb back" id="meBtn" type="button"><span data-ic="pin" data-sz="28"></span><span data-t="my_location">Show my location</span></button></div>
       <div id="jobMap" class="map-box tall"></div>
       <p class="map-note" id="mapNote"></p>
     </section>
@@ -259,10 +270,11 @@ body{font-size:17px}
 <script src="route.js"></script>
 <script src="config.js"></script>
 <script src="icons.js"></script>
+<script src="lang.js"></script>
 <script src="common.js"></script>
 <script>
 (function(){
-  var $=SC.$, $$=SC.$$, esc=SC.esc;
+  var $=SC.$, $$=SC.$$, esc=SC.esc, T=SCL.t;
   var TK="scrapcall_collector_token", QK="scrapcall_collector_queue", DK="scrapcall_collector_data";
   var token=SC.load(TK,null);
   var S=SC.load(DK,{jobs:[],cash:{balance:0},rates:[],name:"",today:""});
@@ -279,24 +291,68 @@ body{font-size:17px}
   }
   function hydrate(root){ $$("[data-ic]",root).forEach(function(el){ el.innerHTML=ic(el.dataset.ic,+el.dataset.sz||24); }); }
   function buzz(ok){ try{ if(navigator.vibrate) navigator.vibrate(ok?35:[60,40,60]); }catch(e){} }
+  // morning / afternoon / evening as a picture and a word in the collector's language
+  function slotKey(s){ s=String(s||"").toLowerCase(); return s.indexOf("morn")===0?"morning":s.indexOf("after")===0?"afternoon":s.indexOf("even")===0?"evening":""; }
+  function slotIcon(s){ var k=slotKey(s); return k==="morning"?"sunrise":k==="afternoon"?"sun":k==="evening"?"moon":"clock"; }
+  function slotName(s){ var k=slotKey(s); return k?T("slot_"+k):String(s||"").toLowerCase(); }
+
+  /* ---------- language and voice ---------- */
+  function say(key,vars){ var s=T(key,vars); SC.toast(s); SCL.speak(s); }
+  // heading with a speaker button; the heading is also read out when the screen opens
+  function head(text){ return '<div class="sayhead"><h3>'+esc(text)+'</h3><button type="button" class="say" data-say="'+esc(text)+'" aria-label="'+esc(T("speak_again"))+'">'+ic("speaker",26)+'</button></div>'; }
+  document.addEventListener("click",function(e){ var b=e.target.closest&&e.target.closest("[data-say]"); if(b) SCL.speak(b.dataset.say,true); });
+  // full-screen green tick or red cross after an action, read out loud, for people who read little
+  function bigFeedback(ok,key,vars,sub){
+    var text=T(key,vars), ov=document.createElement("div");
+    ov.className="fbov "+(ok?"ok":"bad");
+    ov.innerHTML='<div class="disc">'+ic(ok?"check":"cross",96)+'</div><div>'+esc(text)+'</div>'+(sub?'<small>'+esc(sub)+'</small>':"");
+    ($("#dlg").open?$("#dlg"):document.body).appendChild(ov);
+    buzz(ok); SCL.speak(text);
+    var gone=false; function close(){ if(gone) return; gone=true; if(ov.parentNode) ov.parentNode.removeChild(ov); }
+    ov.addEventListener("click",close); setTimeout(close,1800);
+  }
+  function langButtons(box,onPick){
+    box.innerHTML=Object.keys(SCL.langs).map(function(k){ return '<button type="button" class="langbtn" data-lang="'+k+'" aria-pressed="'+(SCL.lang()===k)+'">'+esc(SCL.langs[k].name)+'</button>'; }).join("");
+    $$("[data-lang]",box).forEach(function(b){ b.addEventListener("click",function(){ setLang(b.dataset.lang); buzz(true); SCL.speak(SCL.langs[b.dataset.lang].name,true); if(onPick) onPick(); }); });
+  }
+  function setLang(l){ SCL.setLang(l); applyLang(); }
+  // puts every word on screen in the chosen language (English until one is chosen)
+  function applyLang(){
+    var l=SCL.lang()||"en"; document.documentElement.lang=l;
+    $$("[data-t]").forEach(function(el){ el.textContent=T(el.dataset.t); });
+    $("#langName").textContent=SCL.langs[l]?SCL.langs[l].name:"";
+    $$("#loginLangs [data-lang]").forEach(function(b){ b.setAttribute("aria-pressed",b.dataset.lang===l?"true":"false"); });
+    paintVoice(); dutyNote(T(dutyOn?(lastSent?"duty_sharing":"duty_finding"):"duty_off_note"));
+    $("#connText").textContent=T(navigator.onLine===false?"offline":"online");
+    if(!$("#app").hidden){ $("#hello").textContent=T("hello",{n:S.name||""})+" · v23"; render(); rcKey=""; ensureRates(true); if(tab==="map") renderMap(false); }
+  }
+  function chooseLang(){
+    SC.dialog(T("choose_lang"),'<div class="langbig" id="bigLangs"></div>',null);
+    langButtons($("#bigLangs"),function(){ setTimeout(SC.closeDialog,350); });
+  }
+  function paintVoice(){ var on=SCL.voiceOn(); $("#voiceBtn").innerHTML=ic(on?"speaker":"mute",18); $("#voiceBtn").setAttribute("aria-label",T(on?"voice_on":"voice_off")); }
+  $("#langBtn").addEventListener("click",chooseLang);
+  $("#voiceBtn").addEventListener("click",function(){ SCL.setVoice(!SCL.voiceOn()); paintVoice(); if(SCL.voiceOn()) SCL.speak(T("voice_on")); });
+
   // a row of big picture buttons for choosing one reason; a hidden <select> keeps the chosen value
   function tileHtml(list,id){
     return '<div class="tiles" id="'+id+'" role="group">'+list.map(function(r,i){
-      return '<button type="button" class="tile" data-v="'+r[0]+'" aria-pressed="'+(i===0)+'">'+ic(r[2],40)+'<span>'+esc(r[1])+'</span></button>';
+      return '<button type="button" class="tile" data-v="'+r[0]+'" aria-pressed="'+(i===0)+'">'+ic(r[2],40)+'<span>'+esc(T(r[1]))+'</span></button>';
     }).join("")+'</div>';
   }
   function bindTiles(id,selId){
     var box=$("#"+id), sel=$("#"+selId);
     function paint(){ $$(".tile",box).forEach(function(t){ t.setAttribute("aria-pressed",t.dataset.v===sel.value?"true":"false"); }); }
-    $$(".tile",box).forEach(function(t){ t.addEventListener("click",function(){ sel.value=t.dataset.v; paint(); buzz(true); }); });
+    $$(".tile",box).forEach(function(t){ t.addEventListener("click",function(){ sel.value=t.dataset.v; paint(); buzz(true); SCL.speak($("span",t).textContent); }); });
     sel.addEventListener("change",paint); paint();
   }
   // "Is this right?" with a big green tick and a big red cross, shown before anything is saved or sent
   function check(title,heading,rowsHtml,yesFn,noFn){
-    var body='<h3>'+heading+'</h3>'+rowsHtml+
-      '<div class="yesno"><button type="button" class="btn-no" id="cfNo">'+ic("cross",48)+'<span>No</span></button>'+
-      '<button type="button" class="btn-yes" id="cfYes">'+ic("check",48)+'<span>Yes</span></button></div>';
+    var body=head(heading)+rowsHtml+
+      '<div class="yesno"><button type="button" class="btn-no" id="cfNo">'+ic("cross",48)+'<span>'+esc(T("no"))+'</span></button>'+
+      '<button type="button" class="btn-yes" id="cfYes">'+ic("check",48)+'<span>'+esc(T("yes"))+'</span></button></div>';
     SC.dialog(title,body,null);
+    SCL.speak(heading);
     $("#cfYes").addEventListener("click",function(){ buzz(true); yesFn(); });
     $("#cfNo").addEventListener("click",function(){ buzz(false); noFn(); });
   }
@@ -318,8 +374,9 @@ body{font-size:17px}
   function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); if(typeof stopDuty==="function") stopDuty(); showLogin(msg); }
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
-    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v22";   // app version, to check a phone has the latest
+    $("#hello").textContent=T("hello",{n:S.name||""})+" · v23";   // app version, to check a phone has the latest
     render(); processQueue().then(refresh); resumeDuty(); resumePickup();
+    if(!SCL.chosen()) chooseLang();
     clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
   }
 
@@ -336,10 +393,10 @@ body{font-size:17px}
         if(S.name&&S.name!==res.name){ S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; queue=[]; SC.save(QK,queue); }
         S.name=res.name; SC.save(DK,S); start();
       } else $("#loginErr").textContent=(res&&res.error)||"Couldn’t sign in.";
-    }).catch(function(e){ b.disabled=false; $("#loginErr").textContent=SC.API_URL?"Couldn’t reach the server. You need a connection to sign in the first time.":e.message; });
+    }).catch(function(e){ b.disabled=false; $("#loginErr").textContent=SC.API_URL?T("login_noconn"):e.message; });
   }
   $("#signOut").addEventListener("click",function(){
-    if(queue.length&&!confirm("You have "+queue.length+" saved update(s) that haven’t been sent. Sign out anyway? They will be lost.")) return;
+    if(queue.length&&!confirm(T("signout_q",{n:queue.length}))) return;
     stopDuty(); queue=[]; SC.save(QK,queue); S={jobs:[],cash:{balance:0},rates:[],name:"",today:""}; SC.save(DK,S); signedOut("");
   });
 
@@ -352,7 +409,7 @@ body{font-size:17px}
       applyQueue(); SC.save(DK,S); render();
     }).catch(function(){});
   }
-  SC.watchConnection(function(on){ if(on&&token) processQueue().then(refresh); });
+  SC.watchConnection(function(on){ $("#connText").textContent=T(on?"online":"offline"); if(on&&token) processQueue().then(refresh); });
 
   /* ---------- offline queue: updates are saved here until they reach the office ---------- */
   function uid(){ return "a"+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -380,11 +437,11 @@ body{font-size:17px}
     if(!SC.save(QK,queue)){
       // the phone's storage is full: keep the update, drop the photos
       if(a.photos&&a.photos.length){
-        if(a.type==="photos"){ queue.pop(); SC.toast("There isn’t enough space on this phone to keep those photos until you have signal. Try again when you are online."); return false; }
+        if(a.type==="photos"){ queue.pop(); say("no_room_photos"); return false; }
         a.photos=[]; a.photosDropped=true;
       }
-      if(!SC.save(QK,queue)){ queue.pop(); SC.toast("There isn’t enough space on this phone to save that."); return false; }
-      if(a.photosDropped) SC.toast("The photos were too big to keep without signal, so the update was saved without them.");
+      if(!SC.save(QK,queue)){ queue.pop(); say("no_room"); return false; }
+      if(a.photosDropped) say("photos_dropped");
     }
     applyQueue(); SC.save(DK,S); render(); processQueue().then(refresh);
     return a.photosDropped?"dropped":true;   // "dropped" = saved, but without its photos (the warning is already on screen)
@@ -397,7 +454,7 @@ body{font-size:17px}
       var a=queue[0];
       var req=a.type==="available"?call("c_available",{}):a.type==="nocollect"?call("c_nocollect",{code:a.code,reason:a.reason,note:a.note,photos:a.photos||[]}):a.type==="issue"?call("c_issue",{reason:a.reason,note:a.note}):a.type==="photos"?call("c_photos",{id:a.id,code:a.code,photos:a.photos}):a.type==="status"?call("c_status",{code:a.code,status:a.status}):call("c_complete",{code:a.code,items:a.items,method:a.method,note:a.note,photos:a.photos||[]});
       return req.then(function(res){
-        if(!(res&&res.ok)) SC.toast((a.code||"Problem report")+": "+((res&&res.error)||"couldn’t be saved"));
+        if(!(res&&res.ok)) SC.toast((a.code||T("problem"))+": "+((res&&res.error)||"couldn’t be saved"));
         queue.shift(); SC.save(QK,queue); return next();
       }).catch(function(){ syncing=false; render(); });   // no connection or signed out: keep the queue
     }
@@ -460,43 +517,43 @@ body{font-size:17px}
     if(!n||!plan||!window.SCRoute) return "";
     var l=plan.legs.filter(function(x){ return x.id===j.code; })[0];
     if(!l||l.first) return "";
-    return '<div class="j-sub"><b>'+esc(SCRoute.fmt(l.km,l.min,l.road))+'</b> '+(n===1&&plan.start?"from where you are":"from the previous stop")+'</div>';
+    return '<div class="j-sub"><b>'+esc(SCRoute.fmt(l.km,l.min,l.road))+'</b> '+esc(T(n===1&&plan.start?"from_here":"from_prev"))+'</div>';
   }
   function routeCard(){
     if(!plan||!plan.order.length||!window.SCRoute) return "";
     var stops=plan.order.map(function(x){ return {lat:x.lat,lng:x.lng}; });
-    return '<div class="routecard"><div><b>Your route: '+plan.order.length+' stop'+(plan.order.length===1?"":"s")+' · '+esc(SCRoute.fmt(plan.km,plan.min,plan.live))+'</b>'+
-      '<div class="hint">Stops are in the order that saves driving. Pickups with an agreed time stay in time order. '+(plan.live?"Road distances, no live traffic.":"Estimated until you are online.")+'</div></div>'+
-      '<a class="primary" href="'+esc(SCRoute.navLink(stops))+'" target="_blank" rel="noopener">Navigate all stops</a></div>';
+    return '<div class="routecard"><div><b>'+esc(T("route_t",{n:plan.order.length}))+' · '+esc(SCRoute.fmt(plan.km,plan.min,plan.live))+'</b>'+
+      '<div class="hint">'+esc(T("route_hint"))+'</div></div>'+
+      '<a class="primary" href="'+esc(SCRoute.navLink(stops))+'" target="_blank" rel="noopener">'+esc(T("nav_all"))+'</a></div>';
   }
+  function whenText(j){ return j.confirmed?T("at_time",{t:j.confirmed}):T("wants",{d:SC.day(j.day),s:slotName(j.slot)}); }
   function jobCard(j,n){
-    var when=j.confirmed?("At "+j.confirmed):("Wants "+SC.day(j.day)+", "+(j.slot||"").toLowerCase());
     var cls=j.pending?"wait":j.status==="On the way"?"way":j.status==="Completed"?"done":j.status==="Not collected"?"bad":"todo";
     var icon=cls==="wait"?"upload":cls==="way"?"truck":cls==="done"?"check":cls==="bad"?"cross":"list";
-    var tag=j.pending?'<span class="pill warn">Waiting to send</span>':(j.status==="On the way"?'<span class="pill live">On the way</span>':j.status==="Completed"?'<span class="pill ok">Completed</span>':j.status==="Not collected"?'<span class="pill bad">Not collected</span>':'<span class="pill warn">To do</span>');
+    var tag='<span class="pill '+(cls==="way"?"live":cls==="done"?"ok":cls==="bad"?"bad":"warn")+'">'+esc(T("pill_"+cls))+'</span>';
     return '<button class="job" data-code="'+esc(j.code)+'"><div class="jobrow"><span class="sbadge s-'+cls+'">'+ic(icon,30)+'</span><div class="jobmain">'+
-      '<div class="j-top"><span class="code">'+(n?n+". ":"")+esc(j.code)+'</span>'+(n===1?'<span class="pill live">Next stop</span> ':"")+tag+'</div>'+
+      '<div class="j-top"><span class="code">'+(n?n+". ":"")+esc(j.code)+'</span>'+(n===1?'<span class="pill live">'+esc(T("next_stop"))+'</span> ':"")+tag+'</div>'+
       '<div class="j-name">'+esc(j.name)+'</div>'+
       '<div class="j-line">'+ic("pin",18)+'<span>'+esc(j.addr.slice(0,90))+'</span></div>'+
-      '<div class="j-line">'+ic("clock",18)+'<span>'+esc(when)+'</span></div>'+
+      '<div class="j-line">'+(j.confirmed?ic("clock",18):'<span class="slotic">'+ic(slotIcon(j.slot),18)+'</span>')+'<span>'+esc(whenText(j))+'</span></div>'+
       '<div class="iconrow">'+itemIcons(j.types)+'</div>'+
       '<div class="j-sub">'+esc(j.types)+' — '+esc(j.qty)+'</div>'+legLine(j,n)+
-      (j.status==="Completed"?'<div class="j-sub"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')</div>':
-       (j.phoneOk?"":'<div class="j-tags"><span class="pill warn">Office hasn’t confirmed this phone yet</span></div>'))+'</div></div></button>';
+      (j.status==="Completed"?'<div class="j-sub"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(T(j.method==="Digital"?"digital":"cash"))+')</div>':
+       (j.phoneOk?"":'<div class="j-tags"><span class="pill warn">'+esc(T("phone_unconf"))+'</span></div>'))+'</div></div></button>';
   }
   function render(){
-    var q=$("#qInfo"); q.hidden=!queue.length; q.textContent=queue.length+" waiting to send";
+    var q=$("#qInfo"); q.hidden=!queue.length; q.textContent=T("waiting_n",{n:queue.length});
     var jobs=orderedJobs();
-    $("#v-jobs").innerHTML=jobs.length?routeCard()+jobs.map(function(j,i){ return jobCard(j,validPin(j)&&plan&&plan.order.length?i+1:0); }).join(""):'<div class="empty"><b>No jobs right now</b>When the office gives you a pickup, it shows up here.</div>';
+    $("#v-jobs").innerHTML=jobs.length?routeCard()+jobs.map(function(j,i){ return jobCard(j,validPin(j)&&plan&&plan.order.length?i+1:0); }).join(""):'<div class="empty"><b>'+esc(T("no_jobs_t"))+'</b>'+esc(T("no_jobs"))+'</div>';
     var done=S.jobs.filter(function(j){return j.status==="Completed";});
     var missed=S.jobs.filter(function(j){return j.status==="Not collected";});
     var kg=done.reduce(function(s,j){return s+j.kg;},0), paid=done.reduce(function(s,j){return s+j.paid;},0), pcs=done.reduce(function(s,j){return s+(j.pieces||0);},0);
     var bal=SC.num((S.cash.balance||0)-pendingCash());
     $("#v-today").innerHTML=
-      '<div class="cashcard">'+ic("cash",38)+'<div class="n">'+SC.money(bal)+'</div><div class="l">Cash you should be holding (cash from the office, minus cash paid to customers)</div></div>'+
-      '<div class="stats"><div class="stat">'+ic("check",28)+'<div class="n">'+done.length+'</div><div class="l">pickups done</div></div><div class="stat">'+ic("scale",28)+'<div class="n">'+SC.num(kg)+'</div><div class="l">kg weighed'+(pcs?" · "+pcs+" pcs":"")+'</div></div><div class="stat">'+ic("cash",28)+'<div class="n">'+SC.money(paid)+'</div><div class="l">paid out</div></div></div>'+
-      (done.length?'<h2>Done today</h2>'+done.map(function(j){ return jobCard(j); }).join(""):'<div class="empty"><b>Nothing completed yet today</b>Finished pickups appear here.</div>')+
-      (missed.length?'<h2>Could not collect</h2>'+missed.map(function(j){ return jobCard(j); }).join(""):"");
+      '<div class="cashcard">'+ic("cash",38)+'<div class="n">'+SC.money(bal)+'</div><div class="l">'+esc(T("cash_hold"))+'</div></div>'+
+      '<div class="stats"><div class="stat">'+ic("check",28)+'<div class="n">'+done.length+'</div><div class="l">'+esc(T("picks_done"))+'</div></div><div class="stat">'+ic("scale",28)+'<div class="n">'+SC.num(kg)+'</div><div class="l">'+esc(T("kg_weighed"))+(pcs?" · "+pcs+" "+esc(T("pcs")):"")+'</div></div><div class="stat">'+ic("cash",28)+'<div class="n">'+SC.money(paid)+'</div><div class="l">'+esc(T("paid_out"))+'</div></div></div>'+
+      (done.length?'<h2>'+esc(T("done_today"))+'</h2>'+done.map(function(j){ return jobCard(j); }).join(""):'<div class="empty"><b>'+esc(T("none_done_t"))+'</b>'+esc(T("none_done"))+'</div>')+
+      (missed.length?'<h2>'+esc(T("could_not"))+'</h2>'+missed.map(function(j){ return jobCard(j); }).join(""):"");
     $$("#app .job").forEach(function(b){ b.addEventListener("click",function(){ openJob(b.dataset.code); }); });
     if(tab==="map") renderMap(false);
     renderIssue();
@@ -535,16 +592,16 @@ body{font-size:17px}
     if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)) return false;
     var host=$("#dlg").open?$("#dlg"):document.body, stream=null;
     var ov=document.createElement("div"); ov.className="camov";
-    ov.innerHTML='<video playsinline autoplay muted></video><p class="camwait">Opening the camera…</p>'+
-      '<div class="cambar"><button type="button" class="fb back" data-x>'+ic("cross",28)+'<span>Cancel</span></button>'+
-      '<button type="button" class="shutter" data-shot aria-label="Take the photo">'+ic("camera",40)+'</button></div>';
+    ov.innerHTML='<video playsinline autoplay muted></video><p class="camwait">'+esc(T("opening_cam"))+'</p>'+
+      '<div class="cambar"><button type="button" class="fb back" data-x>'+ic("cross",28)+'<span>'+esc(T("cancel"))+'</span></button>'+
+      '<button type="button" class="shutter" data-shot aria-label="'+esc(T("take_photo"))+'">'+ic("camera",40)+'</button></div>';
     host.appendChild(ov);
     var v=$("video",ov);
     function stop(){ if(stream) stream.getTracks().forEach(function(t){ t.stop(); }); stream=null; if(ov.parentNode) ov.parentNode.removeChild(ov); }
     $("[data-x]",ov).addEventListener("click",function(){ buzz(false); stop(); });
     navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}}})
       .then(function(s){ stream=s; v.srcObject=s; var p=v.play(); if(p&&p.catch) p.catch(function(){}); $(".camwait",ov).hidden=true; })
-      .catch(function(){ stop(); SC.toast("The camera isn’t allowed for this app. Allow it in the browser’s site settings, or use Gallery."); });
+      .catch(function(){ stop(); say("cam_denied"); });
     $("[data-shot]",ov).addEventListener("click",function(){
       if(!v.videoWidth) return;
       var k=Math.min(1,960/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement("canvas");
@@ -559,7 +616,7 @@ body{font-size:17px}
   function mountPhotos(box,arr,max,onChange){
     function draw(){
       box.innerHTML=arr.map(function(p,i){ return '<div class="thumbwrap"><img class="thumb" alt="Photo '+(i+1)+'" src="'+p+'"><button type="button" aria-label="Remove photo '+(i+1)+'" data-rm="'+i+'">×</button></div>'; }).join("")+
-        (arr.length<max?'<button type="button" class="photobtn big" data-cam>'+ic("camera",46)+'<span>Take photo</span></button><button type="button" class="photobtn small" data-gal>'+ic("gallery",32)+'<span>Gallery</span></button>':"")+
+        (arr.length<max?'<button type="button" class="photobtn big" data-cam>'+ic("camera",46)+'<span>'+esc(T("take_photo"))+'</span></button><button type="button" class="photobtn small" data-gal>'+ic("gallery",32)+'<span>'+esc(T("gallery"))+'</span></button>':"")+
         '<input type="file" accept="image/*" capture="environment" hidden data-fc><input type="file" accept="image/*" multiple hidden data-fg>';
       $$("[data-rm]",box).forEach(function(b){ b.addEventListener("click",function(){ arr.splice(+b.dataset.rm,1); draw(); onChange(); }); });
       var fc=$("[data-fc]",box), fg=$("[data-fg]",box), cam=$("[data-cam]",box), gal=$("[data-gal]",box);
@@ -573,7 +630,7 @@ body{font-size:17px}
         Promise.all(files.map(shrink)).then(function(list){
           var bad=0; list.forEach(function(d){ if(!d) bad++; else if(arr.length<max) arr.push(d); });
           draw(); onChange();
-          if(bad) SC.toast("That photo couldn’t be used. Take it again, or choose it from the Gallery.");
+          if(bad) say("photo_bad");
         });
       }); });
     }
@@ -590,15 +647,16 @@ body{font-size:17px}
   }
   function drawRates(){
     var box=$("#v-rates");
-    if(!S.rates||!S.rates.length){ box.innerHTML='<div class="empty"><b>No rate card saved yet</b>Connect to the internet once. The prices are then saved on this phone.</div>'; return; }
+    if(!S.rates||!S.rates.length){ box.innerHTML='<div class="empty"><b>'+esc(T("rc_none_t"))+'</b>'+esc(T("rc_none"))+'</div>'; return; }
     var when=S.ratesAt?new Date(S.ratesAt).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
-    box.innerHTML='<h2>Rate card</h2><p class="hint" id="rcNote"></p><p class="hint">Weighed items are priced per kg. Counted items (marked per piece) are priced by how many there are, with no weighing.</p><div class="card">'+S.rates.map(function(r,i){
-      return '<div class="rcrow"><span class="itemico">'+itemIcon(r.name,30)+'</span><div class="rcname"><b>'+esc(r.name)+'</b><small>'+esc(r.note||"")+'</small></div><div class="rcprice">'+SC.money(r.rate)+'<small>'+ic(r.unit==="piece"?"count":"scale",12)+' per '+(r.unit==="piece"?"piece":"kg")+'</small></div><div class="rcinput">'+
-        '<input type="number" inputmode="'+(r.unit==="piece"?"numeric":"decimal")+'" min="0" step="'+(r.unit==="piece"?"1":"0.01")+'" placeholder="'+(r.unit==="piece"?"qty":"kg")+'" aria-label="'+(r.unit==="piece"?"number of ":"kg of ")+esc(r.name)+'" data-rc="'+i+'"><div class="rcamt" data-rcamt="'+i+'">0.00</div></div></div>';
-    }).join("")+'</div><div class="total"><span>Quote total</span><span><span id="rcKg">0</span> kg · <span id="rcPcs">0</span> pcs · <span id="rcAmt">0.00</span></span></div>'+
-      '<div class="btnrow"><button class="secondary" id="rcClear" type="button">Clear</button></div>'+
-      '<p class="hint">A quick calculator for quoting at the door. The price that counts is saved when you complete the pickup.</p>';
-    $("#rcNote").textContent=navigator.onLine===false?"Saved on this phone"+(when?" on "+when:"")+". Prices may have changed since.":"Price per kg, set by the office"+(when?". Updated "+when:"")+".";
+    box.innerHTML='<h2>'+esc(T("rc_title"))+'</h2><p class="hint" id="rcNote"></p><div class="card">'+S.rates.map(function(r,i){
+      var piece=r.unit==="piece";
+      return '<div class="rcrow"><span class="itemico">'+itemIcon(r.name,30)+'</span><div class="rcname"><b>'+esc(r.name)+'</b><small>'+esc(r.note||"")+'</small></div><div class="rcprice">'+SC.money(r.rate)+'<small>'+ic(piece?"count":"scale",12)+' '+esc(T(piece?"per_piece":"per_kg"))+'</small></div><div class="rcinput">'+
+        '<input type="number" inputmode="'+(piece?"numeric":"decimal")+'" min="0" step="'+(piece?"1":"0.01")+'" placeholder="'+esc(T(piece?"how_many":"kg"))+'" aria-label="'+esc(r.name)+'" data-rc="'+i+'"><div class="rcamt" data-rcamt="'+i+'">0.00</div></div></div>';
+    }).join("")+'</div><div class="total"><span>'+esc(T("rc_quote"))+'</span><span><span id="rcKg">0</span> '+esc(T("kg"))+' · <span id="rcPcs">0</span> '+esc(T("pcs"))+' · <span id="rcAmt">0.00</span></span></div>'+
+      '<div class="btnrow"><button class="secondary" id="rcClear" type="button">'+esc(T("rc_clear"))+'</button></div>'+
+      '<p class="hint">'+esc(T("rc_hint"))+'</p>';
+    $("#rcNote").textContent=(navigator.onLine===false?T("rc_offline"):T("rc_online"))+(when?" "+when:"");
     function calcRc(){
       var kg=0,pcs=0,amt=0;
       $$("#v-rates input[data-rc]").forEach(function(i){
@@ -613,41 +671,43 @@ body{font-size:17px}
   }
 
   /* ---------- tell the office about a problem (vehicle broke down, unwell, ...) ---------- */
-  var ISSUES=[["vehicle","Vehicle broke down","breakdown"],["unwell","Not well or an emergency","unwell"],["area","Can’t reach the area","roadblock"],["other","Other problem","other"]];
+  var ISSUES=[["vehicle","is_vehicle","breakdown"],["unwell","is_unwell","unwell"],["area","is_area","roadblock"],["other","is_other","other"]];
   function renderIssue(){
     var b=$("#issueBar"), u=S.unavailable;
     b.hidden=!u;
     if(!u){ $("#issueBtn").hidden=false; return; }
     $("#issueBtn").hidden=true;
-    b.innerHTML='<div class="issuein">'+ic("warning",32)+'<div><b>'+(u.pending?"Saved. It will be sent to the office when you’re online.":"The office knows.")+'</b>'+esc(u.reason)+
-      (u.pending?"":'<div class="hint">They will contact you and move your pickups to other collectors if needed.</div>')+'</div></div>'+
-      '<button type="button" class="fb yes" id="fineBtn">'+ic("check",28)+'<span>I’m fine again</span></button>';
+    b.innerHTML='<div class="issuein">'+ic("warning",32)+'<div><b>'+esc(T(u.pending?"saved_pending":"office_knows"))+'</b>'+esc(u.reason)+
+      (u.pending?"":'<div class="hint">'+esc(T("office_contact"))+'</div>')+'</div></div>'+
+      '<button type="button" class="fb yes" id="fineBtn">'+ic("check",28)+'<span>'+esc(T("fine_again"))+'</span></button>';
     $("#fineBtn").addEventListener("click",function(){
-      check("Back to work","Are you fine again and ready for pickups?",
-        '<div class="cf-row"><span class="itemico">'+ic("check",32)+'</span><div class="cf-main"><b>The office will see you are available.</b>New pickups can be given to you again.</div></div>',
+      check(T("back_to_work"),T("q_fine"),
+        '<div class="cf-row"><span class="itemico">'+ic("check",32)+'</span><div class="cf-main"><b>'+esc(T("fine_info"))+'</b></div></div>',
         function(){
           enqueue({id:uid(),type:"available"});
           SC.closeDialog();
-          SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"The office knows you are back.");
+          bigFeedback(true,navigator.onLine===false?"fb_offline":"fb_back");
         },
         function(){ SC.closeDialog(); });
     });
   }
   function openProblem(pre){
-    var body='<p class="detail">The office is told straight away. Choose what happened.</p>'+tileHtml(ISSUES,"iTiles")+
-      '<select id="iWhy" hidden>'+ISSUES.map(function(i){ return '<option value="'+i[0]+'">'+esc(i[1])+'</option>'; }).join("")+'</select>'+
-      '<div class="field"><label for="iNote">Details <span class="hint">Optional. Where are you? How long?</span></label><textarea id="iNote"></textarea></div>';
-    SC.dialog("Tell the office",body,'<button class="fb no" id="iSend" type="button">'+ic("upload",28)+'<span>Send to the office</span></button>');
+    var body='<p class="detail">'+esc(T("problem_choose"))+'</p>'+tileHtml(ISSUES,"iTiles")+
+      '<select id="iWhy" hidden>'+ISSUES.map(function(i){ return '<option value="'+i[0]+'">'+esc(T(i[1]))+'</option>'; }).join("")+'</select>'+
+      '<div class="field"><label for="iNote">'+esc(T("problem_det"))+'</label><textarea id="iNote"></textarea></div>';
+    SC.dialog(T("tell_office"),body,'<button class="fb no" id="iSend" type="button">'+ic("upload",28)+'<span>'+esc(T("send_office"))+'</span></button>');
+    SCL.speak(T("problem_choose"));
     bindTiles("iTiles","iWhy");
     if(pre){ $("#iWhy").value=pre.why; $("#iWhy").dispatchEvent(new Event("change")); $("#iNote").value=pre.note; }
     $("#iSend").addEventListener("click",function(){
       var why=$("#iWhy").value, note=$("#iNote").value, row=ISSUES.filter(function(i){return i[0]===why;})[0];
-      var label=row[1]+(note.trim()?": "+note.trim():"");
-      check("Tell the office","Tell the office?",'<div class="cf-row"><span class="itemico bad">'+ic(row[2],32)+'</span><div class="cf-main"><b>'+esc(label)+'</b></div></div>',
+      var shown=T(row[1])+(note.trim()?": "+note.trim():"");
+      var label=["Vehicle broke down","Not well or an emergency","Can’t reach the area","Other problem"][ISSUES.indexOf(row)]+(note.trim()?": "+note.trim():"");   // the office reads English
+      check(T("tell_office"),T("q_tell"),'<div class="cf-row"><span class="itemico bad">'+ic(row[2],32)+'</span><div class="cf-main"><b>'+esc(shown)+'</b></div></div>',
         function(){
           enqueue({id:uid(),type:"issue",reason:why,note:note,label:label});
           SC.closeDialog();
-          SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"The office has been told.");
+          bigFeedback(true,navigator.onLine===false?"fb_offline":"fb_told");
         },
         function(){ openProblem({why:why,note:note}); });
     });
@@ -671,12 +731,12 @@ body{font-size:17px}
   function sendPos(force){
     if(!dutyOn||!lastPos||!token||navigator.onLine===false) return Promise.resolve();
     return call("c_ping",{lat:lastPos.lat,lng:lastPos.lng,acc:lastPos.acc,duty:true}).then(function(res){
-      if(res&&res.ok){ lastSent={lat:lastPos.lat,lng:lastPos.lng,at:Date.now()}; dutyNote("On duty. The office can see where you are."); }
+      if(res&&res.ok){ lastSent={lat:lastPos.lat,lng:lastPos.lng,at:Date.now()}; dutyNote(T("duty_sharing")); }
     }).catch(function(){});
   }
   function onPos(p){
     var acc=Math.round(p.coords.accuracy||0);
-    if(acc>1500) { dutyNote("On duty, but your location is not accurate yet. Move to an open area."); return; }
+    if(acc>1500) { dutyNote(T("duty_inexact")); return; }
     lastPos={lat:Math.round(p.coords.latitude*1e6)/1e6,lng:Math.round(p.coords.longitude*1e6)/1e6,acc:acc,at:Date.now()};
     if(cmap&&window.SCMap&&tab==="map"){
       if(mePin) mePin.setLatLng([lastPos.lat,lastPos.lng]); else { mePin=L.marker([lastPos.lat,lastPos.lng],{icon:SCMap.pinIcon("","p-me")}); mePin.addTo(cmap); }
@@ -686,20 +746,26 @@ body{font-size:17px}
     if(!lastSent||(Date.now()-lastSent.at>30000&&kmBetween(lastSent,lastPos)>0.1)) sendPos();
   }
   function onPosErr(e){
-    if(e&&e.code===1){ stopDuty(); SC.toast("Location is blocked for this app. Allow location in your browser settings, then switch On duty again."); }
-    else dutyNote("On duty, but your location can’t be found yet. Move to an open area.");
+    if(e&&e.code===1){ stopDuty(); say("loc_blocked"); }
+    else dutyNote(T("duty_notfound"));
   }
-  function startDuty(){
-    if(!navigator.geolocation){ $("#dutySw").checked=false; SC.toast("This phone can’t share its location."); return; }
-    if(!SC.load(CONSENT_K,false)){
-      if(!confirm("While you are On duty, the app shares your location with the office so they can send you pickups near you.\n\nSharing stops when you switch off duty or sign out. Keep the app open on screen: it can’t share your location when it is closed or the phone is locked.\n\nSwitch on duty?")){ $("#dutySw").checked=false; return; }
-      SC.save(CONSENT_K,true);
-    }
-    dutyOn=true; SC.save(DUTY_K,true); SC.drop(OFF_K); lastSent=null;
-    dutyNote("On duty. Finding your location…");
+  function beginDuty(){
+    dutyOn=true; $("#dutySw").checked=true; SC.save(DUTY_K,true); SC.drop(OFF_K); lastSent=null;
+    dutyNote(T("duty_finding"));
     watchId=navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:30000,timeout:30000});
     clearInterval(sendTimer); sendTimer=setInterval(function(){ sendPos(); },120000);
     requestWake();
+  }
+  function startDuty(){
+    if(!navigator.geolocation){ $("#dutySw").checked=false; say("no_loc"); return; }
+    if(SC.load(CONSENT_K,false)) return beginDuty();
+    // first time: a picture yes/no about sharing the location, read out loud
+    $("#dutySw").checked=false;
+    check(T("on_duty"),T("duty_q"),
+      '<div class="cf-row"><span class="itemico">'+ic("pin",32)+'</span><div class="cf-main"><b>'+esc(T("duty_why"))+'</b></div></div>'+
+      '<div class="cf-row"><span class="itemico">'+ic("power",30)+'</span><div class="cf-main">'+esc(T("duty_when"))+'</div></div>',
+      function(){ SC.save(CONSENT_K,true); SC.closeDialog(); beginDuty(); },
+      function(){ SC.closeDialog(); });
   }
   function pingOff(){
     if(!token) return;
@@ -711,25 +777,25 @@ body{font-size:17px}
     if(watchId!==null&&navigator.geolocation) navigator.geolocation.clearWatch(watchId);
     watchId=null; clearInterval(sendTimer); lastPos=null; lastSent=null;
     if(wake){ try{wake.release();}catch(e){} wake=null; }
-    dutyNote("Off duty. Your location isn’t shared.");
+    dutyNote(T("duty_off_note"));
     if(was||SC.load(OFF_K,false)) pingOff();
   }
   $("#dutySw").addEventListener("change",function(){ if(this.checked) startDuty(); else stopDuty(); });
   window.addEventListener("online",function(){
     if(dutyOn) sendPos(); else if(SC.load(OFF_K,false)) pingOff();
   });
-  function resumeDuty(){ if(SC.load(DUTY_K,false)){ $("#dutySw").checked=true; startDuty(); } }
+  function resumeDuty(){ if(SC.load(DUTY_K,false)&&SC.load(CONSENT_K,false)&&navigator.geolocation) beginDuty(); }
 
   /* ---------- map of today's stops ---------- */
   var cmap=null, clayer=null, mePin=null, jmap=null;
   function renderMap(refit){
     var box=$("#jobMap"), jobs=orderedJobs();
     var nopin=jobs.filter(function(j){ return !validPin(j); }).length;
-    $("#mapNote").textContent=!jobs.length?"No open jobs to show.":"Numbers show the best order for your stops. The blue line is the road route. Tap a pin for directions."+(nopin?" "+nopin+" job"+(nopin===1?" has":"s have")+" no pin: open the job to get directions from the address.":"");
+    $("#mapNote").textContent=!jobs.length?T("map_none"):T("map_hint")+(nopin?" "+T("map_nopin",{n:nopin}):"");
     $("#meBtn").hidden=!mapOk();
     if(!mapOk()){
       if(cmap){ try{cmap.remove();}catch(e){} cmap=null; mePin=null; }
-      if(window.SCMap) SCMap.offNote(box,"The map needs an internet connection. Your job list still works, and each job has a Directions button.");
+      if(window.SCMap) SCMap.offNote(box,T("map_offline"));
       return;
     }
     if(!cmap){ cmap=SCMap.create(box,{}); clayer=L.layerGroup().addTo(cmap); refit=true; }
@@ -738,7 +804,7 @@ body{font-size:17px}
     jobs.forEach(function(j,i){
       if(!validPin(j)) return;
       var m=L.marker([j.lat,j.lng],{icon:SCMap.pinIcon(String(i+1),j.status==="On the way"?"p-way":"p-assigned")}).addTo(clayer);
-      m.bindPopup('<b>'+(i+1)+'. '+esc(j.name)+'</b><br>'+esc(j.addr.slice(0,80))+'<br><a href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">Directions</a><br><button data-open>Open job</button>');
+      m.bindPopup('<b>'+(i+1)+'. '+esc(j.name)+'</b><br>'+esc(j.addr.slice(0,80))+'<br><a href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">'+esc(T("directions"))+'</a><br><button data-open>'+esc(T("open_job"))+'</button>');
       m.on("popupopen",function(e){ var b=e.popup.getElement().querySelector("[data-open]"); if(b) b.onclick=function(){ openJob(j.code); }; });
       pts.push([j.lat,j.lng]);
     });
@@ -764,7 +830,7 @@ body{font-size:17px}
       mePin.addTo(cmap);
       var pts=openJobs().filter(validPin).map(function(j){ return [j.lat,j.lng]; }); pts.push([p.lat,p.lng]);
       cmap.fitBounds(pts,{padding:[40,40],maxZoom:16});
-    }).catch(function(){ SC.toast("Couldn’t get your location. Allow location access in your browser settings."); });
+    }).catch(function(){ say("my_loc_err"); });
   });
   $("#dlg").addEventListener("close",function(){ if(jmap){ try{jmap.remove();}catch(e){} jmap=null; } });
 
@@ -773,30 +839,30 @@ body{font-size:17px}
   function openJob(code){
     var j=findJob(code); if(!j) return;
     var wa=SC.waHref(j.phone);
-    var photos=(j.photos||[]).map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">Photo '+(i+1)+'</a>':""; }).join("");
+    var photos=(j.photos||[]).map(function(u,i){ var l=SC.safeLink(u); return l?'<a href="'+esc(l)+'" target="_blank" rel="noopener">'+esc(T("photos"))+' '+(i+1)+'</a>':""; }).join("");
     var tiles='<div class="tiles">'+
-      '<a class="tile call" href="'+esc(SC.telHref(j.phone))+'">'+ic("phone",40)+'<span>Call</span></a>'+
-      (wa?'<a class="tile" href="'+esc(wa)+'" target="_blank" rel="noopener">'+ic("chat",40)+'<span>WhatsApp</span></a>':"")+
-      (j.alt?'<a class="tile call" href="'+esc(SC.telHref(j.alt))+'">'+ic("phone",40)+'<span>Call other number</span></a>':"")+
-      '<a class="tile" href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">'+ic("navigate",40)+'<span>Directions</span></a>'+
-      '<a class="tile" href="'+esc(viewHref(j))+'" target="_blank" rel="noopener">'+ic("map",40)+'<span>View on map</span></a></div>';
+      '<a class="tile call" href="'+esc(SC.telHref(j.phone))+'">'+ic("phone",40)+'<span>'+esc(T("call"))+'</span></a>'+
+      (wa?'<a class="tile" href="'+esc(wa)+'" target="_blank" rel="noopener">'+ic("chat",40)+'<span>'+esc(T("whatsapp"))+'</span></a>':"")+
+      (j.alt?'<a class="tile call" href="'+esc(SC.telHref(j.alt))+'">'+ic("phone",40)+'<span>'+esc(T("call_other"))+'</span></a>':"")+
+      '<a class="tile" href="'+esc(dirHref(j))+'" target="_blank" rel="noopener">'+ic("navigate",40)+'<span>'+esc(T("directions"))+'</span></a>'+
+      '<a class="tile" href="'+esc(viewHref(j))+'" target="_blank" rel="noopener">'+ic("map",40)+'<span>'+esc(T("view_map"))+'</span></a></div>';
     var body=
       '<p class="j-name">'+esc(j.name)+'</p>'+tiles+
-      '<div class="j-line">'+ic("pin",20)+'<span><b>Address:</b> '+esc(j.addr)+'</span></div>'+
+      '<div class="j-line">'+ic("pin",20)+'<span><b>'+esc(T("address"))+':</b> '+esc(j.addr)+'</span></div>'+
       (validPin(j)&&mapOk()?'<div id="jMap" class="map-box small"></div>':"")+
-      '<div class="j-line">'+ic("clock",20)+'<span><b>When:</b> '+esc(j.confirmed?j.confirmed:SC.day(j.day)+", "+(j.slot||"").toLowerCase()+" (not confirmed)")+'</span></div>'+
+      '<div class="j-line">'+(j.confirmed?ic("clock",20):'<span class="slotic">'+ic(slotIcon(j.slot),20)+'</span>')+'<span><b>'+esc(T("when"))+':</b> '+esc(j.confirmed?j.confirmed:SC.day(j.day)+", "+slotName(j.slot)+" "+T("not_confirmed"))+'</span></div>'+
       '<div class="iconrow big">'+itemIcons(j.types)+'</div>'+
-      '<p class="detail"><b>Scrap:</b> '+esc(j.types)+' — '+esc(j.qty)+'</p>'+
-      (j.notes?'<p class="detail"><b>Customer notes:</b> '+esc(j.notes)+'</p>':"")+
+      '<p class="detail"><b>'+esc(T("scrap"))+':</b> '+esc(j.types)+' — '+esc(j.qty)+'</p>'+
+      (j.notes?'<p class="detail"><b>'+esc(T("cust_notes"))+':</b> '+esc(j.notes)+'</p>':"")+
       (photos?'<div class="photos detail">'+photos+'</div>':"")+
-      (j.phoneOk?"":'<p class="detail"><b>The office hasn’t confirmed this customer’s phone number yet.</b></p>')+
-      (j.status==="Completed"?'<div class="sec">Collected</div><p class="detail"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(j.method)+')'+(j.pending?" · waiting to send":"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"")+
-      (j.status==="Not collected"?'<div class="sec">Not collected</div><p class="detail">The office has been told and will decide what happens next.</p>':"")+
-      (j.status==="Completed"?'<div class="sec secic">'+ic("camera",22)+' Photos</div><p class="detail">'+(j.donePhotoCount?j.donePhotoCount+" saved"+(j.photosPending||j.pending?" (some waiting to send)":""):"No photos yet")+'. You can add a photo of the scrap, the receipt or the handover.</p><div class="photos" id="aPhotos"></div>':"");
+      (j.phoneOk?"":'<p class="detail"><b>'+esc(T("phone_unconf"))+'</b></p>')+
+      (j.status==="Completed"?'<div class="sec">'+esc(T("collected"))+'</div><p class="detail"><b>'+SC.qty(j.kg,j.pieces)+'</b> · '+SC.money(j.paid)+' ('+esc(T(j.method==="Digital"?"digital":"cash"))+')'+(j.pending?" · "+esc(T("wait_send")):"")+'</p><p class="detail" style="white-space:pre-line">'+esc(j.details)+'</p>':"")+
+      (j.status==="Not collected"?'<div class="sec">'+esc(T("pill_bad"))+'</div><p class="detail">'+esc(T("nc_told"))+'</p>':"")+
+      (j.status==="Completed"?'<div class="sec secic">'+ic("camera",22)+' '+esc(T("photos"))+'</div><p class="detail">'+esc(j.donePhotoCount?T("photos_saved",{n:j.donePhotoCount})+(j.photosPending||j.pending?" "+T("some_waiting"):""):T("no_photos_yet"))+'. '+esc(T("add_photo_hint"))+'</p><div class="photos" id="aPhotos"></div>':"");
     var foot="";
-    if(j.status==="Completed"&&(j.donePhotoCount||0)<8) foot+='<button class="fb go" id="aSave" type="button" disabled>'+ic("upload",28)+'<span>Save photos</span></button>';
-    if(j.status==="Assigned") foot+='<button class="fb way" id="jWay" type="button">'+ic("truck",30)+'<span>I’m on the way</span></button>';
-    if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="fb yes" id="jDone" type="button">'+ic("paper",30)+'<span>Collect the scrap</span></button>';
+    if(j.status==="Completed"&&(j.donePhotoCount||0)<8) foot+='<button class="fb go" id="aSave" type="button" disabled>'+ic("upload",28)+'<span>'+esc(T("save_photos"))+'</span></button>';
+    if(j.status==="Assigned") foot+='<button class="fb way" id="jWay" type="button">'+ic("truck",30)+'<span>'+esc(T("on_my_way"))+'</span></button>';
+    if(j.status==="Assigned"||j.status==="On the way") foot+='<button class="fb yes" id="jDone" type="button">'+ic("paper",30)+'<span>'+esc(T("collect"))+'</span></button>';
     SC.dialog(j.code,body,foot||null);
     if(validPin(j)&&mapOk()){
       jmap=SCMap.create($("#jMap"),{center:{lat:j.lat,lng:j.lng,zoom:16}});
@@ -808,23 +874,23 @@ body{font-size:17px}
     if(j.status==="Completed"&&$("#aPhotos")){
       var apics=[], room=Math.max(0,Math.min(4,8-(j.donePhotoCount||0)));
       if(room>0) mountPhotos($("#aPhotos"),apics,room,function(){ var b=$("#aSave"); if(b) b.disabled=!apics.length; });
-      else $("#aPhotos").innerHTML='<span class="hint">This pickup already has 8 photos.</span>';
+      else $("#aPhotos").innerHTML='<span class="hint">'+esc(T("eight_photos"))+'</span>';
       var ab=$("#aSave"); if(ab) ab.addEventListener("click",function(){
         if(!apics.length) return;
         var sent2=enqueue({id:uid(),type:"photos",code:j.code,photos:apics.slice()});
         if(sent2===false) return;
-        SC.closeDialog(); if(sent2!=="dropped") SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":"Photos saved.");
+        SC.closeDialog(); if(sent2!=="dropped") bigFeedback(true,navigator.onLine===false?"fb_offline":"fb_photos");
       });
     }
     var w=$("#jWay"); if(w) w.addEventListener("click",function(){
-      enqueue({id:uid(),type:"status",code:j.code,status:"On the way"}); buzz(true); SC.closeDialog();
-      SC.toast(navigator.onLine===false?"Saved. It will be sent when you’re online.":"Marked as on the way.");
+      enqueue({id:uid(),type:"status",code:j.code,status:"On the way"}); SC.closeDialog();
+      bigFeedback(true,navigator.onLine===false?"fb_offline":"fb_way");
     });
     var d=$("#jDone"); if(d) d.addEventListener("click",function(){ completeForm(j); });
   }
 
   /* ---------- at the pickup: 1) is the scrap there?  2) photo  3) weigh and pay ---------- */
-  var NOCOL=[["absent","Customer not there","absent"],["nothing","No scrap at the address","empty"],["address","Wrong or unreachable address","wrongplace"],["refused","Customer cancelled or refused","refused"],["other","Other reason","other"]];
+  var NOCOL=[["absent","nc_absent","absent"],["nothing","nc_nothing","empty"],["address","nc_address","wrongplace"],["refused","nc_refused","refused"],["other","nc_other","other"]];
   function stepBar(n){
     var names=["eye","camera","scale"], out='<div class="stepbar" aria-hidden="true">';
     names.forEach(function(name,i){
@@ -834,7 +900,7 @@ body{font-size:17px}
     return out+'</div>';
   }
   function completeForm(j){
-    if(!S.rates.length){ SC.toast("The price list isn’t saved on this phone yet. Connect to the internet once."); return; }
+    if(!S.rates.length){ say("no_rates"); return; }
     stepScrap(j,{pics:[],npics:[],noPhoto:false,vals:{},method:"Cash",note:""});
   }
   // The pickup in progress is kept on the phone at every step. Phones often close the browser page while the
@@ -863,35 +929,37 @@ body{font-size:17px}
     if(!j||(j.status!=="Assigned"&&j.status!=="On the way")||Date.now()-(p.at||0)>3*3600*1000){ dropPickup(); return; }
     var st={pics:p.pics||[],npics:p.npics||[],noPhoto:!!p.noPhoto,vals:p.vals||{},method:p.method||"Cash",note:p.note||""};
     if(p.step==="weigh") stepWeigh(j,st); else if(p.step==="nothing") stepNothing(j,st); else stepPhoto(j,st);
-    SC.toast("Your pickup "+j.code+" was kept. Carry on from here.");
+    say("kept",{c:j.code});
   }
-  function finish(sent,msgOnline){
+  function finish(sent,okKey){
     if(sent===false) return false;
     dropPickup();
     SC.closeDialog();
-    if(sent!=="dropped") SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":msgOnline);
+    if(sent!=="dropped") bigFeedback(true,navigator.onLine===false?"fb_offline":okKey);
     setTab("today"); return true;
   }
 
   // Step 1: is the scrap actually there?
   function stepScrap(j,st){
-    var body=stepBar(1)+'<p class="stepno">Step 1 of 3</p><h3>Is the scrap there?</h3>'+
+    var body=stepBar(1)+'<p class="stepno">'+esc(T("step",{n:1}))+'</p>'+head(T("q_there"))+
       '<div class="iconrow big">'+itemIcons(j.types)+'</div>'+
-      '<p class="detail">The customer listed: <b>'+esc(j.types)+'</b> — '+esc(j.qty)+'</p>'+
-      '<div class="yesno"><button class="btn-no" id="s1No" type="button">'+ic("cross",48)+'<span>No</span><small>Nothing to collect</small></button>'+
-      '<button class="btn-yes" id="s1Yes" type="button">'+ic("check",48)+'<span>Yes</span><small>The scrap is here</small></button></div>';
-    SC.dialog("Pickup "+j.code,body,null);
+      '<p class="detail">'+esc(T("cust_listed"))+': <b>'+esc(j.types)+'</b> — '+esc(j.qty)+'</p>'+
+      '<div class="yesno"><button class="btn-no" id="s1No" type="button">'+ic("cross",48)+'<span>'+esc(T("no"))+'</span><small>'+esc(T("no_nothing"))+'</small></button>'+
+      '<button class="btn-yes" id="s1Yes" type="button">'+ic("check",48)+'<span>'+esc(T("yes"))+'</span><small>'+esc(T("yes_here"))+'</small></button></div>';
+    SC.dialog(T("pickup",{c:j.code}),body,null);
+    SCL.speak(T("q_there"));
     $("#s1Yes").addEventListener("click",function(){ buzz(true); stepPhoto(j,st); });
     $("#s1No").addEventListener("click",function(){ buzz(false); stepNothing(j,st); });
   }
 
   // Nothing to collect: choose why, add a photo if useful, tell the office
   function stepNothing(j,st){
-    var body='<p class="stepno">Nothing to collect</p><h3>What happened?</h3>'+tileHtml(NOCOL,"nTiles")+
-      '<select id="nWhy" hidden>'+NOCOL.map(function(r){ return '<option value="'+r[0]+'">'+esc(r[1])+'</option>'; }).join("")+'</select>'+
-      '<div class="field"><label for="nNote">Details <span class="hint">Optional</span></label><textarea id="nNote"></textarea></div>'+
-      '<div class="sec secic">'+ic("camera",22)+' Photo <span class="hint">Optional. A picture of the door or the place shows you were there.</span></div><div class="photos" id="nPhotos"></div>';
-    SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="nBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb no" id="nSend" type="button">'+ic("upload",28)+'<span>Tell the office</span></button>');
+    var body='<p class="stepno">'+esc(T("no_nothing"))+'</p>'+head(T("what_happened"))+tileHtml(NOCOL,"nTiles")+
+      '<select id="nWhy" hidden>'+NOCOL.map(function(r){ return '<option value="'+r[0]+'">'+esc(T(r[1]))+'</option>'; }).join("")+'</select>'+
+      '<div class="field"><label for="nNote">'+esc(T("details_opt"))+'</label><textarea id="nNote"></textarea></div>'+
+      '<div class="sec secic">'+ic("camera",22)+' <span class="hint">'+esc(T("photo_proof"))+'</span></div><div class="photos" id="nPhotos"></div>';
+    SC.dialog(T("pickup",{c:j.code}),body,'<button class="fb back" id="nBack" type="button">'+ic("back",28)+'<span>'+esc(T("back"))+'</span></button><button class="fb no" id="nSend" type="button">'+ic("upload",28)+'<span>'+esc(T("tell_office"))+'</span></button>');
+    SCL.speak(T("what_happened"));
     bindTiles("nTiles","nWhy");
     st.npics=st.npics||[]; var npics=st.npics;
     mountPhotos($("#nPhotos"),npics,4,function(){ keepPickup(j,st,"nothing"); });
@@ -899,20 +967,21 @@ body{font-size:17px}
     $("#nBack").addEventListener("click",function(){ stepScrap(j,st); });
     $("#nSend").addEventListener("click",function(){
       var why=$("#nWhy").value, note=$("#nNote").value, row=NOCOL.filter(function(r){return r[0]===why;})[0];
-      check("Pickup "+j.code,"Tell the office that nothing was collected?",
-        '<div class="cf-row"><span class="itemico bad">'+ic(row[2],32)+'</span><div class="cf-main"><b>'+esc(row[1])+'</b>'+(note.trim()?esc(note.trim()):"")+'</div></div>'+
-        '<div class="cf-row"><span class="itemico">'+ic(npics.length?"camera":"nocamera",28)+'</span><div class="cf-main">'+(npics.length?npics.length+" photo"+(npics.length===1?"":"s")+" attached.":"No photo.")+'</div></div>',
-        function(){ finish(enqueue({id:uid(),type:"nocollect",code:j.code,reason:why,note:note,photos:npics.slice(),label:row[1]}),"The office has been told."); },
+      check(T("pickup",{c:j.code}),T("q_tell_nothing"),
+        '<div class="cf-row"><span class="itemico bad">'+ic(row[2],32)+'</span><div class="cf-main"><b>'+esc(T(row[1]))+'</b>'+(note.trim()?esc(note.trim()):"")+'</div></div>'+
+        '<div class="cf-row"><span class="itemico">'+ic(npics.length?"camera":"nocamera",28)+'</span><div class="cf-main">'+esc(npics.length?T("n_photos",{n:npics.length}):T("no_photo"))+'</div></div>',
+        function(){ finish(enqueue({id:uid(),type:"nocollect",code:j.code,reason:why,note:note,photos:npics.slice(),label:T(row[1])}),"fb_told"); },
         function(){ stepNothing(j,st); });
     });
   }
 
   // Step 2: photograph the scrap
   function stepPhoto(j,st){
-    var body=stepBar(2)+'<p class="stepno">Step 2 of 3</p><h3>Take a photo of the scrap</h3>'+
-      '<p class="detail">Show what you are collecting. It helps if there is a question later.</p><div class="photos" id="pPhotos"></div>'+
-      '<label class="nophoto"><input type="checkbox" id="pNo"'+(st.noPhoto?" checked":"")+'>'+ic("nocamera",30)+'<span>I can’t take a photo right now</span></label>';
-    SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="pBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb go" id="pNext" type="button" disabled><span>Next: weigh</span>'+ic("next",28)+'</button>');
+    var body=stepBar(2)+'<p class="stepno">'+esc(T("step",{n:2}))+'</p>'+head(T("q_photo"))+
+      '<p class="detail">'+esc(T("photo_why"))+'</p><div class="photos" id="pPhotos"></div>'+
+      '<label class="nophoto"><input type="checkbox" id="pNo"'+(st.noPhoto?" checked":"")+'>'+ic("nocamera",30)+'<span>'+esc(T("cant_photo"))+'</span></label>';
+    SC.dialog(T("pickup",{c:j.code}),body,'<button class="fb back" id="pBack" type="button">'+ic("back",28)+'<span>'+esc(T("back"))+'</span></button><button class="fb go" id="pNext" type="button" disabled><span>'+esc(T("next_weigh"))+'</span>'+ic("next",28)+'</button>');
+    SCL.speak(T("q_photo"));
     function gate(){ $("#pNext").disabled=!(st.pics.length||st.noPhoto); keepPickup(j,st,"photo"); }
     mountPhotos($("#pPhotos"),st.pics,4,gate);
     $("#pNo").addEventListener("change",function(){ st.noPhoto=this.checked; gate(); });
@@ -930,22 +999,23 @@ body{font-size:17px}
     function row(r){
       var piece=r.unit==="piece", listed=mine.indexOf(r.name)>-1;
       return '<div class="wrow'+(listed?" mine":"")+'"><span class="itemico">'+itemIcon(r.name,30)+'</span>'+
-        '<div class="wn">'+esc(r.name)+'<small>'+ic(piece?"count":"scale",14)+' '+SC.money(r.rate)+(piece?" per piece":" per kg")+(listed?" · customer listed this":"")+'</small></div>'+
-        '<div class="wctl">'+(piece?'<button type="button" class="stepper" data-d="-1" aria-label="One less">'+ic("minus",24)+'</button>':"")+
-        '<input type="number" inputmode="'+(piece?"numeric":"decimal")+'" min="0" step="'+(piece?"1":"0.01")+'" placeholder="'+(piece?"how many":"kg")+'" aria-label="'+(piece?"number of ":"kg of ")+esc(r.name)+'" data-t="'+esc(r.name)+'" data-r="'+r.rate+'" data-u="'+(piece?"piece":"kg")+'">'+
-        (piece?'<button type="button" class="stepper" data-d="1" aria-label="One more">'+ic("plus",24)+'</button>':"")+'</div><div class="wamt">0.00</div></div>';
+        '<div class="wn">'+esc(r.name)+'<small>'+ic(piece?"count":"scale",14)+' '+SC.money(r.rate)+' '+esc(T(piece?"per_piece":"per_kg"))+(listed?" · "+esc(T("listed")):"")+'</small></div>'+
+        '<div class="wctl">'+(piece?'<button type="button" class="stepper" data-d="-1" aria-label="'+esc(T("one_less"))+'">'+ic("minus",24)+'</button>':"")+
+        '<input type="number" inputmode="'+(piece?"numeric":"decimal")+'" min="0" step="'+(piece?"1":"0.01")+'" placeholder="'+esc(T(piece?"how_many":"kg"))+'" aria-label="'+esc(r.name)+'" data-t="'+esc(r.name)+'" data-r="'+r.rate+'" data-u="'+(piece?"piece":"kg")+'">'+
+        (piece?'<button type="button" class="stepper" data-d="1" aria-label="'+esc(T("one_more"))+'">'+ic("plus",24)+'</button>':"")+'</div><div class="wamt">0.00</div></div>';
     }
-    var body=stepBar(3)+'<p class="stepno">Step 3 of 3</p><h3>Weigh and count</h3>'+
-      '<p class="detail">Prices come from the office rate list. '+(st.pics.length?st.pics.length+" photo"+(st.pics.length===1?"":"s")+" attached.":"No photo attached.")+'</p>'+
-      (weighed.length?'<div class="sec secic">'+ic("scale",24)+' Weigh these <span class="hint">price per kg</span></div>'+weighed.map(row).join(""):"")+
-      (counted.length?'<div class="sec secic">'+ic("count",24)+' Count these <span class="hint">price per piece, no weighing needed</span></div>'+counted.map(row).join(""):"")+
-      '<div class="total"><span>Total</span><span><span id="tKg">0</span> kg · <span id="tPcs">0</span> pcs · <span id="tAmt">0.00</span></span></div>'+
-      '<div class="sec secic">'+ic("cash",24)+' How did you pay the customer?</div>'+
+    var body=stepBar(3)+'<p class="stepno">'+esc(T("step",{n:3}))+'</p>'+head(T("q_weigh"))+
+      '<p class="detail">'+esc(T("prices_office"))+' '+esc(st.pics.length?T("n_photos",{n:st.pics.length}):T("no_photo"))+'</p>'+
+      (weighed.length?'<div class="sec secic">'+ic("scale",24)+' '+esc(T("weigh_these"))+' <span class="hint">'+esc(T("per_kg"))+'</span></div>'+weighed.map(row).join(""):"")+
+      (counted.length?'<div class="sec secic">'+ic("count",24)+' '+esc(T("count_these"))+' <span class="hint">'+esc(T("per_piece"))+', '+esc(T("no_weighing"))+'</span></div>'+counted.map(row).join(""):"")+
+      '<div class="total"><span>'+esc(T("total"))+'</span><span><span id="tKg">0</span> '+esc(T("kg"))+' · <span id="tPcs">0</span> '+esc(T("pcs"))+' · <span id="tAmt">0.00</span></span></div>'+
+      '<div class="sec secic">'+ic("cash",24)+' '+esc(T("how_paid"))+'</div>'+
       '<div class="radio">'+
-      '<label class="paytile"><input type="radio" name="method" value="Cash"'+(st.method==="Cash"?" checked":"")+'><span>'+ic("cash",44)+'<b>Cash</b></span></label>'+
-      '<label class="paytile"><input type="radio" name="method" value="Digital"'+(st.method==="Digital"?" checked":"")+'><span>'+ic("digital",44)+'<b>Digital</b></span></label></div>'+
-      '<div class="field" style="margin-top:14px"><label for="jNote">Note <span class="hint">Optional</span></label><textarea id="jNote"></textarea></div>';
-    SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="wBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb yes" id="jSave" type="button" disabled>'+ic("check",30)+'<span>Save pickup</span></button>');
+      '<label class="paytile"><input type="radio" name="method" value="Cash"'+(st.method==="Cash"?" checked":"")+'><span>'+ic("cash",44)+'<b>'+esc(T("cash"))+'</b></span></label>'+
+      '<label class="paytile"><input type="radio" name="method" value="Digital"'+(st.method==="Digital"?" checked":"")+'><span>'+ic("digital",44)+'<b>'+esc(T("digital"))+'</b></span></label></div>'+
+      '<div class="field" style="margin-top:14px"><label for="jNote">'+esc(T("note_opt"))+'</label><textarea id="jNote"></textarea></div>';
+    SC.dialog(T("pickup",{c:j.code}),body,'<button class="fb back" id="wBack" type="button">'+ic("back",28)+'<span>'+esc(T("back"))+'</span></button><button class="fb yes" id="jSave" type="button" disabled>'+ic("check",30)+'<span>'+esc(T("save_pickup"))+'</span></button>');
+    SCL.speak(T("q_weigh"));
     function calc(){
       var kg=0,pcs=0,amt=0,items=[],lines=[];
       $$("#dlg input[data-t]").forEach(function(i){
@@ -973,6 +1043,7 @@ body{font-size:17px}
     function snap(){ st.vals={}; $$("#dlg input[data-t]").forEach(function(i){ st.vals[i.dataset.t]=i.value; }); var m=$("#dlg input[name=method]:checked"); if(m) st.method=m.value; st.note=$("#jNote").value; keepPickup(j,st,"weigh"); }
     $$("#dlg input[data-t],#dlg input[name=method],#jNote").forEach(function(i){ i.addEventListener("change",snap); });
     $$("#dlg .stepper").forEach(function(b){ b.addEventListener("click",snap); });
+    $$("#dlg input[name=method]").forEach(function(i){ i.addEventListener("change",function(){ SCL.speak(T(i.value==="Digital"?"digital":"cash")); }); });
     snap();
     $("#wBack").addEventListener("click",function(){ stepPhoto(j,st); });
     $("#jSave").addEventListener("click",function(){
@@ -988,23 +1059,25 @@ body{font-size:17px}
     var method=st.method;
     var rows=c.items.map(function(it){
       var r=rateOf(it.t)||{rate:0}, piece=it.qty!=null, amt=SC.num((piece?it.qty:it.kg)*r.rate);
-      return '<div class="cf-row"><span class="itemico">'+itemIcon(it.t,30)+'</span><div class="cf-main"><b>'+esc(it.t)+'</b>'+ic(piece?"count":"scale",16)+' '+(piece?it.qty+(it.qty===1?" piece":" pieces"):it.kg+" kg")+'</div><div class="cf-amt">'+SC.money(amt)+'</div></div>';
+      return '<div class="cf-row"><span class="itemico">'+itemIcon(it.t,30)+'</span><div class="cf-main"><b>'+esc(it.t)+'</b>'+ic(piece?"count":"scale",16)+' '+(piece?it.qty+" "+esc(T("pcs")):it.kg+" "+esc(T("kg")))+'</div><div class="cf-amt">'+SC.money(amt)+'</div></div>';
     }).join("");
     var big=c.items.some(function(it){ return (it.kg||0)>=300||(it.qty||0)>=50; });
     var body=rows+
       '<div class="bignum">'+SC.money(c.amt)+'</div>'+
-      '<p class="cf-line">'+esc(SC.qty(c.kg,c.pcs))+', total '+SC.money(c.amt)+', paid by '+esc(method.toLowerCase())+'.</p>'+
-      '<div class="cf-row"><span class="itemico">'+ic(method==="Cash"?"cash":"digital",30)+'</span><div class="cf-main"><b>'+esc(method)+'</b></div></div>'+
-      '<div class="cf-row"><span class="itemico">'+ic(st.pics.length?"camera":"nocamera",28)+'</span><div class="cf-main">'+(st.pics.length?st.pics.length+" photo"+(st.pics.length===1?"":"s")+" attached.":"No photo.")+'</div></div>'+
-      (big?'<div class="cf-warn">'+ic("warning",30)+'<span>Very big number. Check it again.</span></div>':"");
-    check("Pickup "+j.code,"Save this pickup?",body,
-      function(){ finish(enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:st.note,photos:st.pics.slice(),est:{kg:c.kg,pcs:c.pcs,amt:c.amt,lines:c.lines}}),"Pickup saved."); },
+      '<div class="cf-row"><span class="itemico">'+ic(method==="Cash"?"cash":"digital",30)+'</span><div class="cf-main"><b>'+esc(T(method==="Cash"?"cash":"digital"))+'</b></div></div>'+
+      '<div class="cf-row"><span class="itemico">'+ic(st.pics.length?"camera":"nocamera",28)+'</span><div class="cf-main">'+esc(st.pics.length?T("n_photos",{n:st.pics.length}):T("no_photo"))+'</div></div>'+
+      (big?'<div class="cf-warn">'+ic("warning",30)+'<span>'+esc(T("very_big"))+'</span></div>':"");
+    check(T("pickup",{c:j.code}),T("q_save"),body,
+      function(){ finish(enqueue({id:uid(),type:"complete",code:j.code,items:c.items,method:method,note:st.note,photos:st.pics.slice(),est:{kg:c.kg,pcs:c.pcs,amt:c.amt,lines:c.lines}}),"fb_saved"); },
       function(){ stepWeigh(j,st); });
+    if(big) SCL.speak(T("q_save")+" "+T("very_big"));
   }
 
   /* ---------- go ---------- */
   SC.pwa("#installBtn");
   hydrate(document);
+  langButtons($("#loginLangs"));
+  applyLang();
   if(token) start(); else showLogin("");
 })();
 </script>
