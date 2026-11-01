@@ -229,8 +229,7 @@ body{font-size:17px}
   </header>
   <div class="conn" id="conn" role="status" aria-live="polite"><span class="dot"></span><span id="connText">Online</span><span id="qInfo" class="pill warn" style="margin-left:auto" hidden></span></div>
   <div class="duty" id="duty">
-    <!-- location sharing is switched off for now: remove "hidden" from the next line to bring back the On duty switch -->
-    <label class="dutybtn" hidden><input type="checkbox" id="dutySw"><span class="dutyic" data-ic="power" data-sz="28"></span><span class="dutytx"><b>On duty</b><small id="dutyNote">Off duty. Your location isn’t shared.</small></span></label>
+    <label class="dutybtn"><input type="checkbox" id="dutySw"><span class="dutyic" data-ic="power" data-sz="28"></span><span class="dutytx"><b>On duty</b><small id="dutyNote">Off duty. Your location isn’t shared.</small></span></label>
     <button class="problembtn" id="issueBtn" type="button"><span data-ic="warning" data-sz="30"></span><span>Problem</span></button>
   </div>
   <div class="issuebar" id="issueBar" role="status" hidden></div>
@@ -319,7 +318,7 @@ body{font-size:17px}
   function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); if(typeof stopDuty==="function") stopDuty(); showLogin(msg); }
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
-    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v20";   // app version, to check a phone has the latest
+    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v21";   // app version, to check a phone has the latest
     render(); processQueue().then(refresh); resumeDuty(); resumePickup();
     clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
   }
