@@ -743,6 +743,8 @@ body{font-size:17px}
     if(validPin(j)&&mapOk()){
       jmap=SCMap.create($("#jMap"),{center:{lat:j.lat,lng:j.lng,zoom:16}});
       L.marker([j.lat,j.lng],{icon:SCMap.pinIcon("","p-set")}).addTo(jmap);
+      // on a touchscreen a swipe over the map should scroll the pop-up, not move the map (Directions opens the full map)
+      if(L.Browser.touch&&jmap){ jmap.dragging.disable(); if(jmap.tap) jmap.tap.disable(); }
       setTimeout(function(){ if(jmap) jmap.invalidateSize(); },150);
     }
     if(j.status==="Completed"&&$("#aPhotos")){
