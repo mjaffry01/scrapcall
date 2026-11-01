@@ -311,7 +311,7 @@ body{font-size:17px}
   function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); if(typeof stopDuty==="function") stopDuty(); showLogin(msg); }
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
-    $("#hello").textContent="Hello, "+(S.name||"collector");
+    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v19";   // app version, to check a phone has the latest
     render(); processQueue().then(refresh); resumeDuty(); resumePickup();
     clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
   }
@@ -797,7 +797,17 @@ body{font-size:17px}
     if(!SC.save(PK,p)){ p.pics=[]; p.npics=[]; SC.save(PK,p); }   // no room for the photos: keep the rest
   }
   function dropPickup(){ keptAt=""; SC.drop(PK); }
-  $("#dlg").addEventListener("close",dropPickup);   // closed on purpose or finished: nothing to come back to
+  // During a pickup the pop-up only closes with its × button or when the pickup is saved. On Android the back
+  // action (which leaving the camera can trigger) closes pop-ups: block it, and if the phone closes it anyway,
+  // open it again straight away with everything still in it, so the photo that is arriving lands in it.
+  var pickOnPurpose=false;
+  $("#dlg").addEventListener("click",function(e){ if(e.target.closest(".dlg-x")) pickOnPurpose=true; });
+  $("#dlg").addEventListener("cancel",function(e){ if(keptAt) e.preventDefault(); });
+  $("#dlg").addEventListener("close",function(){
+    var d=this;
+    if(keptAt&&!pickOnPurpose){ setTimeout(function(){ if(!d.open) d.showModal(); },0); return; }
+    pickOnPurpose=false; dropPickup();
+  });
   function resumePickup(){
     var p=SC.load(PK,null); if(!p) return;
     var j=findJob(p.code);

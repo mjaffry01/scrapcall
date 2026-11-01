@@ -1,6 +1,6 @@
 // ScrapCall service worker: lets the customer, collector and director apps open with no signal.
-// Change CACHE to "scrapcall-v19" (and so on) whenever you update any app file.
-var CACHE = "scrapcall-v18";
+// Change CACHE to "scrapcall-v20" (and so on) whenever you update any app file.
+var CACHE = "scrapcall-v19";
 var SHELL = [
   "./", "index.html", "collector", "director", "collector.html", "director.html",
   "common.css", "common.js", "config.js",
@@ -22,7 +22,8 @@ self.addEventListener("activate", function (e) {
 });
 
 function networkFirst(req, fallbackKey) {
-  return fetch(req).then(function (res) {
+  // "no-cache" asks GitHub whether the page changed, instead of using the browser's 10-minute copy
+  return fetch(req, { cache: "no-cache" }).then(function (res) {
     if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
     return res;
   }).catch(function () {
