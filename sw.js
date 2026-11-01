@@ -1,6 +1,6 @@
 // ScrapCall service worker: lets the customer, collector and director apps open with no signal.
-// Change CACHE to "scrapcall-v24" (and so on) whenever you update any app file.
-var CACHE = "scrapcall-v23";
+// Change CACHE to "scrapcall-v25" (and so on) whenever you update any app file.
+var CACHE = "scrapcall-v24";
 var SHELL = [
   "./", "index.html", "collector", "director", "collector.html", "director.html",
   "common.css", "common.js", "config.js",
@@ -10,7 +10,10 @@ var SHELL = [
 ];
 
 self.addEventListener("install", function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
+  // "reload" fetches each file fresh from GitHub, not from the browser's 10-minute copy
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    return c.addAll(SHELL.map(function (u) { return new Request(u, { cache: "reload" }); }));
+  }).then(function () { return self.skipWaiting(); }));
 });
 
 self.addEventListener("activate", function (e) {
@@ -64,7 +67,10 @@ self.addEventListener("fetch", function (e) {
           caches.open(CACHE).then(function (c) { c.put(req, copy); });
         }
         return res;
-      }).catch(function () { return hit; });
+      }).catch(function () {
+        // no signal: a file asked for as "icons.js?v=23" can still be served from the saved "icons.js"
+        return hit || caches.match(req, { ignoreSearch: true });
+      });
       return hit || net;
     })
   );
