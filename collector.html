@@ -312,7 +312,7 @@ body{font-size:17px}
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
     $("#hello").textContent="Hello, "+(S.name||"collector");
-    render(); processQueue().then(refresh); resumeDuty();
+    render(); processQueue().then(refresh); resumeDuty(); resumePickup();
     clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
   }
 
@@ -497,22 +497,27 @@ body{font-size:17px}
   }
 
   /* ---------- camera: photos are shrunk on the phone so they save and send quickly ---------- */
+  // Big camera photos (50 MP and more) can run a phone out of memory if read in full, so the photo is decoded
+  // straight to a smaller size where the phone allows it, and never copied into memory as text first
   function shrink(file){
+    function paint(src,w,h){
+      var k=Math.min(1,960/Math.max(w,h)), c=document.createElement("canvas");
+      c.width=Math.round(w*k); c.height=Math.round(h*k);
+      c.getContext("2d").drawImage(src,0,0,c.width,c.height);
+      return c.toDataURL("image/jpeg",.65);
+    }
     return new Promise(function(res){
-      var r=new FileReader();
-      r.onload=function(){
-        var img=new Image();
-        img.onload=function(){
-          var k=Math.min(1,960/Math.max(img.width,img.height)), c=document.createElement("canvas");
-          c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
-          c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-          res(c.toDataURL("image/jpeg",.65));
-        };
-        img.onerror=function(){ res(null); };
-        img.src=r.result;
-      };
-      r.onerror=function(){ res(null); };
-      r.readAsDataURL(file);
+      function viaImage(){
+        var url=URL.createObjectURL(file), img=new Image();
+        img.onload=function(){ var d=null; try{ d=paint(img,img.naturalWidth,img.naturalHeight); }catch(e){} URL.revokeObjectURL(url); res(d); };
+        img.onerror=function(){ URL.revokeObjectURL(url); res(null); };
+        img.src=url;
+      }
+      if(!window.createImageBitmap) return viaImage();
+      createImageBitmap(file,{resizeWidth:960,resizeQuality:"medium"}).then(function(bm){
+        var d=null; try{ d=paint(bm,bm.width,bm.height); }catch(e){} if(bm.close) bm.close();
+        if(d) res(d); else viaImage();
+      }).catch(viaImage);
     });
   }
   // Fills `box` with the photos in `arr` and "Take photo" / "From gallery" buttons (up to `max` photos)
@@ -527,7 +532,11 @@ body{font-size:17px}
       if(gal) gal.addEventListener("click",function(){ fg.click(); });
       [fc,fg].forEach(function(inp){ inp.addEventListener("change",function(){
         var files=Array.prototype.slice.call(inp.files||[]).slice(0,max-arr.length);
-        Promise.all(files.map(shrink)).then(function(list){ list.forEach(function(d){ if(d&&arr.length<max) arr.push(d); }); draw(); onChange(); });
+        Promise.all(files.map(shrink)).then(function(list){
+          var bad=0; list.forEach(function(d){ if(!d) bad++; else if(arr.length<max) arr.push(d); });
+          draw(); onChange();
+          if(bad) SC.toast("That photo couldn’t be used. Take it again, or choose it from the Gallery.");
+        });
       }); });
     }
     draw();
@@ -777,10 +786,29 @@ body{font-size:17px}
   }
   function completeForm(j){
     if(!S.rates.length){ SC.toast("The price list isn’t saved on this phone yet. Connect to the internet once."); return; }
-    stepScrap(j,{pics:[],noPhoto:false,vals:{},method:"Cash",note:""});
+    stepScrap(j,{pics:[],npics:[],noPhoto:false,vals:{},method:"Cash",note:""});
+  }
+  // The pickup in progress is kept on the phone at every step. Phones often close the browser page while the
+  // camera is open; when the app opens again the collector carries on where they were, photos included.
+  var PK="scrapcall_collector_pickup", keptAt="";
+  function keepPickup(j,st,step){
+    keptAt=step;
+    var p={code:j.code,step:step,pics:st.pics,npics:st.npics||[],noPhoto:st.noPhoto,vals:st.vals,method:st.method,note:st.note,at:Date.now()};
+    if(!SC.save(PK,p)){ p.pics=[]; p.npics=[]; SC.save(PK,p); }   // no room for the photos: keep the rest
+  }
+  function dropPickup(){ keptAt=""; SC.drop(PK); }
+  $("#dlg").addEventListener("close",dropPickup);   // closed on purpose or finished: nothing to come back to
+  function resumePickup(){
+    var p=SC.load(PK,null); if(!p) return;
+    var j=findJob(p.code);
+    if(!j||(j.status!=="Assigned"&&j.status!=="On the way")||Date.now()-(p.at||0)>3*3600*1000){ dropPickup(); return; }
+    var st={pics:p.pics||[],npics:p.npics||[],noPhoto:!!p.noPhoto,vals:p.vals||{},method:p.method||"Cash",note:p.note||""};
+    if(p.step==="weigh") stepWeigh(j,st); else if(p.step==="nothing") stepNothing(j,st); else stepPhoto(j,st);
+    SC.toast("Your pickup "+j.code+" was kept. Carry on from here.");
   }
   function finish(sent,msgOnline){
     if(sent===false) return false;
+    dropPickup();
     SC.closeDialog();
     if(sent!=="dropped") SC.toast(navigator.onLine===false?"Saved on this phone. It will be sent when you’re online.":msgOnline);
     setTab("today"); return true;
@@ -806,7 +834,9 @@ body{font-size:17px}
       '<div class="sec secic">'+ic("camera",22)+' Photo <span class="hint">Optional. A picture of the door or the place shows you were there.</span></div><div class="photos" id="nPhotos"></div>';
     SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="nBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb no" id="nSend" type="button">'+ic("upload",28)+'<span>Tell the office</span></button>');
     bindTiles("nTiles","nWhy");
-    var npics=[]; mountPhotos($("#nPhotos"),npics,4,function(){});
+    st.npics=st.npics||[]; var npics=st.npics;
+    mountPhotos($("#nPhotos"),npics,4,function(){ keepPickup(j,st,"nothing"); });
+    keepPickup(j,st,"nothing");
     $("#nBack").addEventListener("click",function(){ stepScrap(j,st); });
     $("#nSend").addEventListener("click",function(){
       var why=$("#nWhy").value, note=$("#nNote").value, row=NOCOL.filter(function(r){return r[0]===why;})[0];
@@ -824,7 +854,7 @@ body{font-size:17px}
       '<p class="detail">Show what you are collecting. It helps if there is a question later.</p><div class="photos" id="pPhotos"></div>'+
       '<label class="nophoto"><input type="checkbox" id="pNo"'+(st.noPhoto?" checked":"")+'>'+ic("nocamera",30)+'<span>I can’t take a photo right now</span></label>';
     SC.dialog("Pickup "+j.code,body,'<button class="fb back" id="pBack" type="button">'+ic("back",28)+'<span>Back</span></button><button class="fb go" id="pNext" type="button" disabled><span>Next: weigh</span>'+ic("next",28)+'</button>');
-    function gate(){ $("#pNext").disabled=!(st.pics.length||st.noPhoto); }
+    function gate(){ $("#pNext").disabled=!(st.pics.length||st.noPhoto); keepPickup(j,st,"photo"); }
     mountPhotos($("#pPhotos"),st.pics,4,gate);
     $("#pNo").addEventListener("change",function(){ st.noPhoto=this.checked; gate(); });
     gate();
@@ -880,6 +910,11 @@ body{font-size:17px}
       inp.value=v?v:""; inp.dispatchEvent(new Event("input",{bubbles:true})); buzz(true);
     }); });
     calc();
+    // remember the numbers and payment so far, in case the phone closes the page
+    function snap(){ st.vals={}; $$("#dlg input[data-t]").forEach(function(i){ st.vals[i.dataset.t]=i.value; }); var m=$("#dlg input[name=method]:checked"); if(m) st.method=m.value; st.note=$("#jNote").value; keepPickup(j,st,"weigh"); }
+    $$("#dlg input[data-t],#dlg input[name=method],#jNote").forEach(function(i){ i.addEventListener("change",snap); });
+    $$("#dlg .stepper").forEach(function(b){ b.addEventListener("click",snap); });
+    snap();
     $("#wBack").addEventListener("click",function(){ stepPhoto(j,st); });
     $("#jSave").addEventListener("click",function(){
       var c=calc(); if(!c.items.length) return;
