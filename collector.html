@@ -189,6 +189,14 @@ body{font-size:17px}
 .issuein{display:flex;gap:10px;align-items:flex-start}
 .issuein .ico{color:var(--bad);width:32px;height:32px}
 .center{text-align:center}
+/* in-app camera: the photo is taken inside the app, so Android never closes it to open the camera app */
+.camov{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column}
+.camov video{flex:1;min-height:0;width:100%;object-fit:cover;background:#000}
+.cambar{display:flex;align-items:center;justify-content:space-around;gap:16px;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:#000}
+.cambar .fb{min-width:120px}
+.shutter{width:88px;height:88px;border-radius:50%;border:6px solid #fff;background:#17795c;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.shutter .ico{width:40px;height:40px}
+.camwait{position:absolute;top:40%;left:0;right:0;text-align:center;color:#fff;font-weight:700}
 </style>
 </head>
 <body>
@@ -311,7 +319,7 @@ body{font-size:17px}
   function signedOut(msg){ token=null; SC.drop(TK); clearInterval(timer); if(typeof stopDuty==="function") stopDuty(); showLogin(msg); }
   function start(){
     $("#login").hidden=true; $("#app").hidden=false;
-    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v19";   // app version, to check a phone has the latest
+    $("#hello").textContent="Hello, "+(S.name||"collector")+" · v20";   // app version, to check a phone has the latest
     render(); processQueue().then(refresh); resumeDuty(); resumePickup();
     clearInterval(timer); timer=setInterval(function(){ if(!document.hidden) processQueue().then(refresh); },60000);
   }
@@ -520,6 +528,33 @@ body{font-size:17px}
       }).catch(viaImage);
     });
   }
+  // The camera inside the app. Opening the phone's camera app makes Android close this app on many phones,
+  // and the photo is lost; here the photo is taken from a live camera view instead. Returns false if the
+  // phone can't do this (then the phone's camera app is used).
+  function openCamera(onShot){
+    if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)) return false;
+    var host=$("#dlg").open?$("#dlg"):document.body, stream=null;
+    var ov=document.createElement("div"); ov.className="camov";
+    ov.innerHTML='<video playsinline autoplay muted></video><p class="camwait">Opening the camera…</p>'+
+      '<div class="cambar"><button type="button" class="fb back" data-x>'+ic("cross",28)+'<span>Cancel</span></button>'+
+      '<button type="button" class="shutter" data-shot aria-label="Take the photo">'+ic("camera",40)+'</button></div>';
+    host.appendChild(ov);
+    var v=$("video",ov);
+    function stop(){ if(stream) stream.getTracks().forEach(function(t){ t.stop(); }); stream=null; if(ov.parentNode) ov.parentNode.removeChild(ov); }
+    $("[data-x]",ov).addEventListener("click",function(){ buzz(false); stop(); });
+    navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}}})
+      .then(function(s){ stream=s; v.srcObject=s; var p=v.play(); if(p&&p.catch) p.catch(function(){}); $(".camwait",ov).hidden=true; })
+      .catch(function(){ stop(); SC.toast("The camera isn’t allowed for this app. Allow it in the browser’s site settings, or use Gallery."); });
+    $("[data-shot]",ov).addEventListener("click",function(){
+      if(!v.videoWidth) return;
+      var k=Math.min(1,960/Math.max(v.videoWidth,v.videoHeight)), c=document.createElement("canvas");
+      c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+      c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+      var d=c.toDataURL("image/jpeg",.7);
+      buzz(true); stop(); onShot(d);
+    });
+    return true;
+  }
   // Fills `box` with the photos in `arr` and "Take photo" / "From gallery" buttons (up to `max` photos)
   function mountPhotos(box,arr,max,onChange){
     function draw(){
@@ -528,7 +563,10 @@ body{font-size:17px}
         '<input type="file" accept="image/*" capture="environment" hidden data-fc><input type="file" accept="image/*" multiple hidden data-fg>';
       $$("[data-rm]",box).forEach(function(b){ b.addEventListener("click",function(){ arr.splice(+b.dataset.rm,1); draw(); onChange(); }); });
       var fc=$("[data-fc]",box), fg=$("[data-fg]",box), cam=$("[data-cam]",box), gal=$("[data-gal]",box);
-      if(cam) cam.addEventListener("click",function(){ fc.click(); });
+      if(cam) cam.addEventListener("click",function(){
+        var ok=openCamera(function(d){ if(arr.length<max) arr.push(d); draw(); onChange(); });
+        if(!ok) fc.click();   // no camera view possible on this phone: use the phone's camera app
+      });
       if(gal) gal.addEventListener("click",function(){ fg.click(); });
       [fc,fg].forEach(function(inp){ inp.addEventListener("change",function(){
         var files=Array.prototype.slice.call(inp.files||[]).slice(0,max-arr.length);

@@ -1,6 +1,6 @@
 // ScrapCall service worker: lets the customer, collector and director apps open with no signal.
-// Change CACHE to "scrapcall-v20" (and so on) whenever you update any app file.
-var CACHE = "scrapcall-v19";
+// Change CACHE to "scrapcall-v21" (and so on) whenever you update any app file.
+var CACHE = "scrapcall-v20";
 var SHELL = [
   "./", "index.html", "collector", "director", "collector.html", "director.html",
   "common.css", "common.js", "config.js",
